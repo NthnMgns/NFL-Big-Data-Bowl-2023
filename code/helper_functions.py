@@ -52,3 +52,34 @@ def calculate_Oline_zones(points):
     hull = ConvexHull(points.loc[:, ["x", 'y']].values)
     np_points = points.loc[:, ["x", 'y', 'team']].values
     return np_points[hull.vertices,0], np_points[hull.vertices,1], np_points[hull.vertices,2]
+
+def compute_orientation(data):
+    copy = data.copy()
+    copy = copy.assign(o_x = np.sin(copy.o*2*np.pi/360))
+    copy = copy.assign(o_y = np.cos(copy.o*2*np.pi/360))
+    return copy
+
+def face2face(tracking_data, scouting_data):
+    """
+    run in a for loop to compute for each play at each frame
+    """
+    blocked_opponent = scouting_data[["nflId","pff_nflIdBlockedPlayer"]]
+    #data_with_opp = pd.merge(tracking_data,blocked_opponent,how="outer",on="nflId")
+    #print(data_with_opp)
+    opp_orientation = pd.merge(tracking_data[["nflId","o_x","o_y"]],blocked_opponent,how="inner",left_on="nflId", right_on="pff_nflIdBlockedPlayer")
+    opp_orientation = opp_orientation.rename(columns={"nflId_y" : "nflId"})
+    #print(opp_orientation)
+    data_with_opp_orientation = pd.merge(tracking_data, opp_orientation[["nflId","o_x","o_y","pff_nflIdBlockedPlayer"]],how="inner",on="nflId")
+    data_with_opp_orientation = data_with_opp_orientation.rename(columns={"o_x_x" : "o_x_off", 
+                                                                        "o_y_x" : "o_y_off",
+                                                                        "o_x_y" : "o_x_def",
+                                                                        "o_y_y" : "o_y_def",})
+
+    data_with_opp_orientation["f2f"] = data_with_opp_orientation.o_x_off*data_with_opp_orientation.o_x_def < 0
+    return data_with_opp_orientation
+
+
+
+
+
+
