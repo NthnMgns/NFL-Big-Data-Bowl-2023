@@ -84,8 +84,8 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId):
                 },
                 {
                     "args": [[None], {"frame": {"duration": 0, "redraw": False},
-                                      "mode": "immediate",
-                                      "transition": {"duration": 0}}],
+                                    "mode": "immediate",
+                                    "transition": {"duration": 0}}],
                     "label": "Pause",
                     "method": "animate"
                 }
@@ -120,31 +120,37 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId):
     }
 
     frames = []
+    list_orientations = []
     for frameId in sorted_frame_list:
-        data, slider_step = display_1_frame(frameId, line_of_scrimmage, first_down_marker, selected_tracking_df)
+        data, slider_step, orientations = display_1_frame(frameId, line_of_scrimmage, first_down_marker, selected_tracking_df)
+        #print(orientations)
         sliders_dict["steps"].append(slider_step)
         frames.append(go.Frame(data=data, name=str(frameId)))
+        list_orientations.append(orientations)
 
     scale=9
-    layout = go.Layout(
-        autosize=False,
-        width=120*scale,
-        height=60*scale,
-        xaxis=dict(range=[0, 120], autorange=False, tickmode='array',tickvals=np.arange(10, 111, 5).tolist(),showticklabels=False),
-        yaxis=dict(range=[0, 53.3], autorange=False,showgrid=False,showticklabels=False),
+    
 
-        plot_bgcolor='#00B140',
-        # Create title and add play description at the bottom of the chart for better visual appeal
-        title=f"GameId: {gameId}, PlayId: {playId}<br>{gameClock} {quarter}Q", #+"<br>"*19+f"{playDescription}",
-        updatemenus=updatemenus_dict,
-        sliders = [sliders_dict]
-    )
+    layout = go.Layout(
+    autosize=False,
+    width=120*scale,
+    height=60*scale,
+    xaxis=dict(range=[0, 120], autorange=False, tickmode='array',tickvals=np.arange(10, 111, 5).tolist(),showticklabels=False),
+    yaxis=dict(range=[0, 53.3], autorange=False,showgrid=False,showticklabels=False),
+
+    plot_bgcolor='#00B140',
+    # Create title and add play description at the bottom of the chart for better visual appeal
+    title=f"GameId: {gameId}, PlayId: {playId}<br>{gameClock} {quarter}Q", #+"<br>"*19+f"{playDescription}",
+    updatemenus=updatemenus_dict,
+    sliders = [sliders_dict])
+
 
     fig = go.Figure(
         data=frames[0]["data"],
         layout= layout,
-        frames=frames[1:]
+        frames=frames[1:],
     )
+    
     # Create First Down Markers 
     for y_val in [0,53]:
         fig.add_annotation(
@@ -163,7 +169,8 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId):
                 borderpad=4,
                 bgcolor="#ff7f0e",
                 opacity=1
-                )
+                )    
+
     return fig
 
 def create_field(data, line_of_scrimmage = None, first_down_marker = None):
@@ -232,16 +239,42 @@ def add_players_viz(data, selected_tracking_df, frameId):
                                                                                     selected_player_df["displayName"].values[0],
                                                                                     selected_player_df["pff_positionLinedUp"].values[0],
                                                                                     selected_player_df["pff_role"].values[0]))
+                data.append(go.Scatter(x=[float(selected_player_df["x"]),float(selected_player_df["x"])+2*float(selected_player_df["o_x"])], 
+                                    y=[float(selected_player_df["y"]),float(selected_player_df["y"])+2*float(selected_player_df["o_y"])],
+                                    marker_color='black',
+                                    showlegend=False))
             data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers',marker_color=colors_teams[team],name=team,hovertext=hover_text_array,hoverinfo="text"))
         else:
             data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers',marker_color=colors_teams[team],name=team,hoverinfo='none'))
     return data
 
+def add_orientation(selected_tracking_df, frameId):
+    """Ajoute les joueurs sur la viz du terrain"""
+    # Plot Players
+    list_of_arrows = []
+    for team in selected_tracking_df.team.unique():
+        plot_df = selected_tracking_df[(selected_tracking_df.team==team)&(selected_tracking_df.frameId==frameId)].copy()
+        if team != "football":
+            for nflId in plot_df.nflId:
+                selected_player_df = plot_df[plot_df.nflId==nflId]
+                list_of_arrows.append(dict(
+                                        x= float(selected_player_df["x"])+float(selected_player_df["o_x"]),
+                                        y= float(selected_player_df["y"])+float(selected_player_df["o_y"]),
+                                        showarrow=True,
+                                        ax= float(selected_player_df["x"]),
+                                        ay= float(selected_player_df["y"]),
+                                        arrowhead = 3,
+                                        arrowwidth=1.5,
+                                        arrowcolor='rgb(0,0,0)',)
+                                        )
+    return list_of_arrows
+
 def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None, selected_tracking_df = pd.DataFrame()):
     """Créer l'ensemble des visualisations nécessaires à une frame"""
     data = []
-    data = create_field(data, line_of_scrimmage = None, first_down_marker = None)
+    data = create_field(data, line_of_scrimmage, first_down_marker)
     data = add_players_viz(data, selected_tracking_df, frameId)
+    
     # add frame to slider
     slider_step = {"args": [
         [frameId],
@@ -254,7 +287,8 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
 
     # TODO 
     # Pour ajouter d'autres visualisation à une figure 
+    orientations = add_orientation(selected_tracking_df, frameId)
     # Exemple
     if False : 
         data.append(go.Scatter())
-    return data, slider_step
+    return data, slider_step, orientations
