@@ -81,5 +81,59 @@ def face2face(tracking_data, scouting_data):
 
 
 
+# ------------------------------------------------- #
+#          Création de nouvelles variables          #
+# ------------------------------------------------- #
+
+
+def distance(x1,y1,x2,y2):
+    """
+    Calcul la distance entre deux points de coordonnées (x1,y1) et (x2,y2).
+    """
+    distance = np.sqrt((x1-x2)**2+(y1-y2)**2)
+    return distance
+
+def nearest_player(nflId, gameId, playId, frameId, tracking_data):
+    """
+    Retourne l'id du joueur le plus proche de nflId.
+    """
+    player = tracking_data.query(f"nflId == {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId}")
+    other = tracking_data.query(f"nflId != {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId} & team != 'football'")
+    dist = distance(player.x.values,player.y.values,other.x.values,other.y.values)
+    return other.nflId.values[np.argmin(dist)]  
+
+def compute_matchup(gameId, playId, scouting_data, tracking_data):
+    """
+    Identifie les matchups des joueurs offensifs identifiés comme bloqueurs.
+    """
+    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
+    tracking_data = tracking_data.assign(nearestPlayer = np.nan)
+    n_frame = tracking_data.frameId.unique().shape[0]
+    scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
+    pass_block = scouting_data.query("pff_role == 'Pass Block'").nflId.values
+
+    for frame in np.arange(n_frame)+1:
+        data = tracking_data.query(f"frameId == {frame}").copy()
+        for player in pass_block:
+            data.loc[data["nflId"] == player,"nearestPlayer"] = nearest_player(player, gameId, playId, frame, data)
+        tracking_data.loc[tracking_data["frameId"] == frame] = data    
+    
+    return tracking_data
+
+def ball_qb_hands(gameId, playId, scouting_data, tracking_data, seuil = 1):
+    """
+    Ajoute un booléen à tracking_data indiquant si la balle est dans les mains du QB (1) ou non (0).
+    """
+    qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
+    qb = tracking_data.query(f"nflId == {qbId} & gameId == {gameId} & playId == {playId}")
+    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
+    ball = tracking_data.query("team == 'football'")
+    dist = distance(qb.x.values,qb.y.values,ball.x.values,ball.y.values)
+    tracking_data = tracking_data.assign(ballInQBHands = np.nan)
+    tracking_data.loc[tracking_data["nflId"] == qbId, "ballInQBHands"] = dist
+    tracking_data.loc[tracking_data["ballInQBHands"] <= seuil, "ballInQBHands"] = 1
+    tracking_data.loc[tracking_data["ballInQBHands"] > seuil, "ballInQBHands"] = 0
+    return tracking_data
+
 
 
