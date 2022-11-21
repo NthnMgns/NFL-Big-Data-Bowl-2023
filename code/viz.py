@@ -48,6 +48,10 @@ colors_teams = {
 #               Fonctions d'affichage                    #
 # ------------------------------------------------------ #
 def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId):
+    """
+    Création du lecteur vidéo pour nos visualisations. 
+    Reprise du code : https://www.kaggle.com/code/huntingdata11/animated-and-interactive-nfl-plays-in-plotly/notebook
+    """
     selected_play_df = play_df[(play_df.playId==playId)&(play_df.gameId==gameId)].copy()
     
     tracking_players_df = pd.merge(tracking_df,players,how="left",on = "nflId")
@@ -117,83 +121,11 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId):
 
     frames = []
     for frameId in sorted_frame_list:
-        data = []
-        # Add Numbers to Field 
-        data.append(
-            go.Scatter(
-                x=np.arange(20,110,10), 
-                y=[5]*len(np.arange(20,110,10)),
-                mode='text',
-                text=list(map(str,list(np.arange(20, 61, 10)-10)+list(np.arange(40, 9, -10)))),
-                textfont_size = 30,
-                textfont_family = "Courier New, monospace",
-                textfont_color = "#ffffff",
-                showlegend=False,
-                hoverinfo='none'
-            )
-        )
-        data.append(
-            go.Scatter(
-                x=np.arange(20,110,10), 
-                y=[53.5-5]*len(np.arange(20,110,10)),
-                mode='text',
-                text=list(map(str,list(np.arange(20, 61, 10)-10)+list(np.arange(40, 9, -10)))),
-                textfont_size = 30,
-                textfont_family = "Courier New, monospace",
-                textfont_color = "#ffffff",
-                showlegend=False,
-                hoverinfo='none'
-            )
-        )
-        # Add line of scrimage 
-        data.append(
-            go.Scatter(
-                x=[line_of_scrimmage,line_of_scrimmage], 
-                y=[0,53.5],
-                line_dash='dash',
-                line_color='blue',
-                showlegend=False,
-                hoverinfo='none'
-            )
-        )
-        # Add First down line 
-        data.append(
-            go.Scatter(
-                x=[first_down_marker,first_down_marker], 
-                y=[0,53.5],
-                line_dash='dash',
-                line_color='yellow',
-                showlegend=False,
-                hoverinfo='none'
-            )
-        )
-        # Plot Players
-        for team in selected_tracking_df.team.unique():
-            plot_df = selected_tracking_df[(selected_tracking_df.team==team)&(selected_tracking_df.frameId==frameId)].copy()
-            if team != "football":
-                hover_text_array=[]
-                for nflId in plot_df.nflId:
-                    selected_player_df = plot_df[plot_df.nflId==nflId]
-                    hover_text_array.append("nflId:{}<br>displayName:{}<br>Position:{}<br>Role:{}".format(selected_player_df["nflId"].values[0],
-                                                                                      selected_player_df["displayName"].values[0],
-                                                                                      selected_player_df["pff_positionLinedUp"].values[0],
-                                                                                      selected_player_df["pff_role"].values[0]))
-                data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers',marker_color=colors[team],name=team,hovertext=hover_text_array,hoverinfo="text"))
-            else:
-                data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers',marker_color=colors[team],name=team,hoverinfo='none'))
-        # add frame to slider
-        slider_step = {"args": [
-            [frameId],
-            {"frame": {"duration": 100, "redraw": False},
-             "mode": "immediate",
-             "transition": {"duration": 0}}
-        ],
-            "label": str(frameId),
-            "method": "animate"}
+        data, slider_step = display_1_frame(frameId, line_of_scrimmage, first_down_marker, selected_tracking_df)
         sliders_dict["steps"].append(slider_step)
         frames.append(go.Frame(data=data, name=str(frameId)))
 
-    scale=10
+    scale=9
     layout = go.Layout(
         autosize=False,
         width=120*scale,
@@ -203,7 +135,7 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId):
 
         plot_bgcolor='#00B140',
         # Create title and add play description at the bottom of the chart for better visual appeal
-        title=f"GameId: {gameId}, PlayId: {playId}<br>{gameClock} {quarter}Q"+"<br>"*19+f"{playDescription}",
+        title=f"GameId: {gameId}, PlayId: {playId}<br>{gameClock} {quarter}Q", #+"<br>"*19+f"{playDescription}",
         updatemenus=updatemenus_dict,
         sliders = [sliders_dict]
     )
@@ -232,5 +164,97 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId):
                 bgcolor="#ff7f0e",
                 opacity=1
                 )
-
     return fig
+
+def create_field(data, line_of_scrimmage = None, first_down_marker = None):
+    """Création du terrain et des lignes"""
+    # Add Numbers to Field 
+    data.append(
+        go.Scatter(
+            x=np.arange(20,110,10), 
+            y=[5]*len(np.arange(20,110,10)),
+            mode='text',
+            text=list(map(str,list(np.arange(20, 61, 10)-10)+list(np.arange(40, 9, -10)))),
+            textfont_size = 30,
+            textfont_family = "Courier New, monospace",
+            textfont_color = "#ffffff",
+            showlegend=False,
+            hoverinfo='none'
+        )
+    )
+    data.append(
+        go.Scatter(
+            x=np.arange(20,110,10), 
+            y=[53.5-5]*len(np.arange(20,110,10)),
+            mode='text',
+            text=list(map(str,list(np.arange(20, 61, 10)-10)+list(np.arange(40, 9, -10)))),
+            textfont_size = 30,
+            textfont_family = "Courier New, monospace",
+            textfont_color = "#ffffff",
+            showlegend=False,
+            hoverinfo='none'
+        )
+    )
+    # Add line of scrimage 
+    data.append(
+        go.Scatter(
+            x=[line_of_scrimmage,line_of_scrimmage], 
+            y=[0,53.5],
+            line_dash='dash',
+            line_color='blue',
+            showlegend=False,
+            hoverinfo='none'
+        )
+    )
+    # Add First down line 
+    data.append(
+        go.Scatter(
+            x=[first_down_marker,first_down_marker], 
+            y=[0,53.5],
+            line_dash='dash',
+            line_color='yellow',
+            showlegend=False,
+            hoverinfo='none'
+        )
+    )
+    return data
+
+def add_players_viz(data, selected_tracking_df, frameId):
+    """Ajoute les joueurs sur la viz du terrain"""
+    # Plot Players
+    for team in selected_tracking_df.team.unique():
+        plot_df = selected_tracking_df[(selected_tracking_df.team==team)&(selected_tracking_df.frameId==frameId)].copy()
+        if team != "football":
+            hover_text_array=[]
+            for nflId in plot_df.nflId:
+                selected_player_df = plot_df[plot_df.nflId==nflId]
+                hover_text_array.append("nflId:{}<br>displayName:{}<br>Position:{}<br>Role:{}".format(selected_player_df["nflId"].values[0],
+                                                                                    selected_player_df["displayName"].values[0],
+                                                                                    selected_player_df["pff_positionLinedUp"].values[0],
+                                                                                    selected_player_df["pff_role"].values[0]))
+            data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers',marker_color=colors_teams[team],name=team,hovertext=hover_text_array,hoverinfo="text"))
+        else:
+            data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers',marker_color=colors_teams[team],name=team,hoverinfo='none'))
+    return data
+
+def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None, selected_tracking_df = pd.DataFrame()):
+    """Créer l'ensemble des visualisations nécessaires à une frame"""
+    data = []
+    data = create_field(data, line_of_scrimmage = None, first_down_marker = None)
+    data = add_players_viz(data, selected_tracking_df, frameId)
+    # add frame to slider
+    slider_step = {"args": [
+        [frameId],
+        {"frame": {"duration": 100, "redraw": False},
+            "mode": "immediate",
+            "transition": {"duration": 0}}
+    ],
+        "label": str(frameId),
+        "method": "animate"}
+
+    # TODO 
+    # Pour ajouter d'autres visualisation à une figure 
+    # Exemple
+    if False : 
+        data.append(go.Scatter())
+    return data, slider_step
