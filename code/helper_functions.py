@@ -6,57 +6,49 @@ import plotly.graph_objects as go
 import plotly.io as pio
 pio.renderers.default = "browser"
 
+from scipy.spatial import Voronoi, ConvexHull
+from shapely.geometry import Polygon
 
 # ------------------------------------------------------ #
-#       Importations des données - Data Management       #
+#                 Définition de la poche                 #
 # ------------------------------------------------------ #
 
-path = os.path.join(os.getcwd(),"data")
-csv_files = glob.glob(os.path.join(path, "*.csv"))
+def get_player_position(selected_tracking_df, frameId):
+    """Récupère la position des joueurs sur le terrain pour une frame donnée (selected_tracking_df, frame)"""
+    points = list()
+    for team in selected_tracking_df.team.unique():
+        plot_df = selected_tracking_df[(selected_tracking_df.team==team)&(selected_tracking_df.frameId==frameId)].copy()
+        if team != "football":
+            mask = plot_df.pff_role.isin(['Pass Block', 'Pass'])
+            #mask = plot_df.index
+            points.append(plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']])
+    points = pd.concat(points).reset_index().drop(columns = ['index'])
+    return points
 
-for f in csv_files:
-    name = os.path.basename(f).replace(".csv", "")    
-    globals()[f"df_{name}"] = pd.read_csv(f)
-    
-    print("Path: ", f)
-    print("Filename: ", f.split("\\")[-1])
-
-df = pd.merge(df_games,df_plays,how="inner",on="gameId")
-df = pd.merge(df,df_week1,how="inner",on=["gameId","playId"])
-df = pd.merge(df,df_players,how="left",on="nflId")
-
-def distance_qb(x_qb,y_qb,x,y):
-    dist = np.sqrt((x_qb-x)**2+(y_qb-y)**2)
-    return dist
-
-test = df.query("playId == '187' & frameId == '1'")
-qb = test.query("officialPosition == 'QB'")
-test = test.assign(dist_qb = distance_qb(qb.x.values,qb.y.values,test.x.values,test.y.values))       
-test.dist_qb  
-
-
-# ------------------------ #
-#       Visualisation      #
-# ------------------------ #
-    
-def plot_play(playid,frameid,data,title):
+def calculate_voronoi_zones(points):
     """
-    Tracer une frame d'un jeu.
+    Calcul le graph de Voronoi pour un ensemble de points donnés.
+    Inspired by : https://github.com/rjtavares/football-crunching/blob/master/notebooks/using%20voronoi%20diagrams.ipynb
     """
-    dt = data.query("playId == '" + str(playid) + "' & frameId == '" + str(frameid) + "'")
-    fig = go.Figure(layout_yaxis_range=[0,53.3],
-                    layout_xaxis_range=[0,120])
-    colors = {dt.team.unique()[0]:"blue", dt.team.unique()[1]:"red", dt.team.unique()[2]:"black"}
-    for team in dt.team.unique():
-        plot_data = dt[(dt.team==team)]
-        fig.add_trace(go.Scatter(x=plot_data["x"],y=plot_data["y"],mode="markers",marker_color=colors[team],name=team))
-    
-    fig.update_layout(title=f"Week {dt.week.unique()[0]} : {dt.team.unique()[0]} VS {dt.team.unique()[1]} - Play {playid} frame {frameid}",
-                      legend_title="Team",
-                      plot_bgcolor="green")
-    fig.show()
-    
-    
-df.playId.unique()
-plot_play(137,1,df,"")
+    vor = Voronoi(points.loc[:, ["x", 'y']].values)
+    point_region = list(vor.point_region[:-4])
+    # A investir
+    for i in list(point_region):
+        if not i in points.index.tolist() :
+            point_region.remove(i)
+    points.loc[point_region, 'region'] = [i for i in range(len(point_region))]
+    voronoi_zone_points = list()
+    for index, region in enumerate(vor.regions):
+        if not -1 in region:
+            if len(region)>0:
+                pl = points[points['region']==index]
+                team = pl.iloc[0].team if not pl.empty else None
+                polygon = Polygon([vor.vertices[i] for i in region])
+                x, y = polygon.exterior.xy
+                voronoi_zone_points.append([list(x), list(y), team])
+    return voronoi_zone_points 
 
+def calculate_Oline_zones(points):
+    hull = ConvexHull(points.loc[:, ["x", 'y']].values)
+    np_points = points.loc[:, ["x", 'y', 'team']].values
+    return np_points[hull.vertices,0], np_points[hull.vertices,1], np_points[hull.vertices,2]
