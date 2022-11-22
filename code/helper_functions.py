@@ -66,10 +66,11 @@ def compute_orientation(data):
     copy = copy.assign(o_y = np.cos(copy.o*2*np.pi/360))
     return copy
 
-
-def face2face(gameId, playId, frameId, tracking_data, scouting_data):
-    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId} & frameId == {frameId}")
-    scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
+def face2face(tracking_data, scouting_data):
+    #def face2face(gameId, playId, frameId, tracking_data, scouting_data):
+    #tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId} & frameId == {frameId}")
+    #scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
+    #tracking_data = tracking_data.query(f"frameId == {frameId}")
     """
     run in a for loop to compute for each play at each frame
     """
@@ -80,12 +81,12 @@ def face2face(gameId, playId, frameId, tracking_data, scouting_data):
     opp_orientation = opp_orientation.rename(columns={"nflId_y" : "nflId"})
     #print(opp_orientation)
     data_with_opp_orientation = pd.merge(tracking_data , opp_orientation[["nflId","o_x","o_y","pff_nflIdBlockedPlayer"]],how="inner",on="nflId")
-    data_with_opp_orientation = data_with_opp_orientation.rename(columns={"o_x_x" : "o_x_off", 
-                                                                        "o_y_x" : "o_y_off",
-                                                                        "o_x_y" : "o_x_def",
-                                                                        "o_y_y" : "o_y_def",})
+    data_with_opp_orientation = data_with_opp_orientation.rename(columns={"o_x_x" : "o_x", 
+                                                                        "o_y_x" : "o_y",
+                                                                        "o_x_y" : "o_x_opp",
+                                                                        "o_y_y" : "o_y_opp",})
 
-    data_with_opp_orientation["isBeaten"] = data_with_opp_orientation.o_x_off*data_with_opp_orientation.o_x_def > 0
+    data_with_opp_orientation["isBeaten"] = data_with_opp_orientation.o_x*data_with_opp_orientation.o_x_opp > 0
     return data_with_opp_orientation
     
 
