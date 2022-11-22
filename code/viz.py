@@ -49,7 +49,7 @@ colors_teams = {
 # ------------------------------------------------------ #
 #               Fonctions d'affichage                    #
 # ------------------------------------------------------ #
-def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId, displayZone = False):
+def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId, displayZone = False, displayOrientations = False):
     """
     Création du lecteur vidéo pour nos visualisations. 
     Reprise du code : https://www.kaggle.com/code/huntingdata11/animated-and-interactive-nfl-plays-in-plotly/notebook
@@ -123,7 +123,7 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId, di
 
     frames = []
     for frameId in sorted_frame_list:
-        data, slider_step = display_1_frame(frameId, line_of_scrimmage, first_down_marker, selected_tracking_df, displayZone)
+        data, slider_step = display_1_frame(frameId, line_of_scrimmage, first_down_marker, selected_tracking_df, displayZone, displayOrientations)
         sliders_dict["steps"].append(slider_step)
         frames.append(go.Frame(data=data, name=str(frameId)))
     scale=9
@@ -223,7 +223,7 @@ def create_field(data, line_of_scrimmage = None, first_down_marker = None):
     )
     return data
 
-def add_players_viz(data, selected_tracking_df, frameId):
+def add_players_viz(data, selected_tracking_df, frameId, displayOrientations = False):
     """Ajoute les joueurs sur la viz du terrain"""
     # Plot Players
     for team in selected_tracking_df.team.unique():
@@ -236,10 +236,11 @@ def add_players_viz(data, selected_tracking_df, frameId):
                                                                                     selected_player_df["displayName"].values[0],
                                                                                     selected_player_df["pff_positionLinedUp"].values[0],
                                                                                     selected_player_df["pff_role"].values[0]))
-                data.append(go.Scatter(x=[float(selected_player_df["x"]),float(selected_player_df["x"])+2*float(selected_player_df["o_x"])], 
-                                    y=[float(selected_player_df["y"]),float(selected_player_df["y"])+2*float(selected_player_df["o_y"])],
-                                    marker_color='black',
-                                    showlegend=False))
+                if displayOrientations:
+                    data.append(go.Scatter(x=[float(selected_player_df["x"]),float(selected_player_df["x"])+2*float(selected_player_df["o_x"])], 
+                                        y=[float(selected_player_df["y"]),float(selected_player_df["y"])+2*float(selected_player_df["o_y"])],
+                                        marker_color='black',
+                                        showlegend=False))
             data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers', marker_line_width=2, marker_size=10, marker_color=colors_teams[team],name=team,hovertext=hover_text_array,hoverinfo="text"))
         else:
             data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers', marker_line_width=2, marker_size=10, marker_color=colors_teams[team],name=team,hoverinfo='none'))
@@ -254,14 +255,15 @@ def add_zone(data, voronoi_points):
             mode='lines',
             fill="toself", 
             opacity=0.5,
-            fillcolor = colors_teams[team[0]]
+            fillcolor = colors_teams[team[0]],
+            showlegend=False
             )
         )
     return data
 
 def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None, 
             selected_tracking_df = pd.DataFrame(),
-            displayZone = False) :
+            displayZone = False, displayOrientations = False) :
     """Créer l'ensemble des visualisations nécessaires à une frame"""
     data = []
     data = create_field(data, line_of_scrimmage, first_down_marker)
@@ -270,7 +272,7 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
         #voronoi_points = calculate_voronoi_zones(points)
         D_lines_points = calculate_Oline_zones(points)
         data = add_zone(data, D_lines_points)
-    data = add_players_viz(data, selected_tracking_df, frameId)
+    data = add_players_viz(data, selected_tracking_df, frameId, displayOrientations)
     
     # add frame to slider
     slider_step = {"args": [
