@@ -67,6 +67,7 @@ def pocketArea(region_polys, region_pts, players_points):
     for i in region_polys_ids:
         team_area += region_polys[i].area    
     return team_area
+
 # ------------------------------------------------- #
 #          Calcul Orientations et face à face       #
 # ------------------------------------------------- #
@@ -99,17 +100,10 @@ def face2face(tracking_data, scouting_data):
 
     data_with_opp_orientation["isBeaten"] = data_with_opp_orientation.o_x*data_with_opp_orientation.o_x_opp > 0
     return data_with_opp_orientation
-    
-
-
-    
-
-
 
 # ------------------------------------------------- #
 #          Création de nouvelles variables          #
 # ------------------------------------------------- #
-
 
 def distance(x1,y1,x2,y2):
     """
@@ -123,7 +117,8 @@ def nearest_player(nflId, gameId, playId, frameId, tracking_data):
     Retourne l'id du joueur le plus proche de nflId.
     """
     player = tracking_data.query(f"nflId == {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId}")
-    other = tracking_data.query(f"nflId != {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId} & team != 'football'")
+    player_team = player.team.values[0]
+    other = tracking_data.query(f"nflId != {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId} & team != 'football' & team != '{player_team}'")
     dist = distance(player.x.values,player.y.values,other.x.values,other.y.values)
     return other.nflId.values[np.argmin(dist)]  
 
@@ -187,6 +182,5 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
                 data.loc[data["nflId"] == player,"beaten"] = 0
             tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
-
 
 
