@@ -36,36 +36,37 @@ for gameId in tqdm(gameIds) :
     df_plays = list()
     for playId in tqdm(playIds):
         
-        # Boucle sur les séquences de passe
-        selected_play_df = df_play[(df_play.playId==playId)&(df_play.gameId==gameId)].copy()    
-        tracking_players_df = pd.merge(df_tracking,df_players,how="left",on = "nflId")
-        tracking_players_df = pd.merge(tracking_players_df,df_pffScoutingData,how="left",on = ["nflId","playId","gameId"])
-        selected_tracking_df = tracking_players_df[(tracking_players_df.playId==playId)&(tracking_players_df.gameId==gameId)].copy()
-        selected_tracking_df = beaten_by_defender(gameId, playId, df_pffScoutingData, selected_tracking_df, seuil = 0.5)
+        try :
+            # Boucle sur les séquences de passe
+            selected_play_df = df_play[(df_play.playId==playId)&(df_play.gameId==gameId)].copy()    
+            tracking_players_df = pd.merge(df_tracking,df_players,how="left",on = "nflId")
+            tracking_players_df = pd.merge(tracking_players_df,df_pffScoutingData,how="left",on = ["nflId","playId","gameId"])
+            selected_tracking_df = tracking_players_df[(tracking_players_df.playId==playId)&(tracking_players_df.gameId==gameId)].copy()
+            selected_tracking_df = beaten_by_defender(gameId, playId, df_pffScoutingData, selected_tracking_df, seuil = 0.5)
 
-        # Liste des frames
-        sorted_frame_list = selected_tracking_df.frameId.unique()
-        sorted_frame_list.sort()
-        # Lecture de données pertinentes
-        line_of_scrimmage = selected_play_df.absoluteYardlineNumber.values[0]
-        # playDescription = selected_play_df.playDescription.values[0]
-        list_aire_t = list()
-        
-        for frameId in sorted_frame_list:
-            # Boucle sur les frames
-            selected_frame_df = selected_tracking_df[selected_tracking_df.frameId == frameId]
-            offensive_points = get_Oline_position(selected_frame_df)
-            defensive_points = get_Dline_position(selected_frame_df)
-            QB_zone = calculate_Oline_zones(offensive_points, line_of_scrimmage)
-            region_polys, region_pts, players_points = calculate_voronoi_zones(QB_zone, offensive_points, defensive_points)
-            list_aire_t.append(pd.DataFrame([[frameId, pocketArea(region_polys, region_pts, players_points)]], columns = ['frameId', 'Area']))
-        df_aire = pd.concat(list_aire_t)
-        df_aire.loc[:, 'playId'] = playId
-        df_plays.append(df_aire)
+            # Liste des frames
+            sorted_frame_list = selected_tracking_df.frameId.unique()
+            sorted_frame_list.sort()
+            # Lecture de données pertinentes
+            line_of_scrimmage = selected_play_df.absoluteYardlineNumber.values[0]
+            # playDescription = selected_play_df.playDescription.values[0]
+            list_aire_t = list()
+            
+            for frameId in sorted_frame_list:
+                # Boucle sur les frames
+                selected_frame_df = selected_tracking_df[selected_tracking_df.frameId == frameId]
+                offensive_points = get_Oline_position(selected_frame_df)
+                defensive_points = get_Dline_position(selected_frame_df)
+                QB_zone = calculate_Oline_zones(offensive_points, line_of_scrimmage)
+                region_polys, region_pts, players_points = calculate_voronoi_zones(QB_zone, offensive_points, defensive_points)
+                list_aire_t.append(pd.DataFrame([[frameId, pocketArea(region_polys, region_pts, players_points)]], columns = ['frameId', 'Area']))
+            df_aire = pd.concat(list_aire_t)
+            df_aire.loc[:, 'playId'] = playId
+            df_plays.append(df_aire)
 
-        #except : 
-        #    print('Problème pour gameId, playId, frameId : ' + str((gameId, playId)))
-        #    continue
+        except : 
+            print('Problème pour gameId, playId, frameId : ' + str((gameId, playId)))
+            continue
     df_plays = pd.concat(df_plays)
     df_plays.loc[:, 'gameId'] = gameId
     df_games.append(df_plays)

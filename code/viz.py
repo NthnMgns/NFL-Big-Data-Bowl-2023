@@ -125,8 +125,14 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId, di
     }
 
     frames = []
+    n = 0
     for frameId in sorted_frame_list:
         data, slider_step = display_1_frame(frameId, line_of_scrimmage, first_down_marker, selected_tracking_df, displayZone, displayOrientations)
+        # Il ne peut pas y avoir plus d'élément qu'à la première frame
+        if n == 0 :
+            for i in range(20):
+                data.append(go.Scatter(x=[i, i+1], y=[i, i+1],mode='lines',line=dict(width=0.001),fill="toself", opacity=1,fillcolor = 'white',showlegend=False,hoverinfo='none'))
+            n = 1
         sliders_dict["steps"].append(slider_step)
         frames.append(go.Frame(data=data, name=str(frameId)))
     scale=9
@@ -284,6 +290,7 @@ def add_zone(data, region_polys, region_pts, players_points):
                         hoverinfo='none'
                         )
                     )
+
     return data
 
 def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None, 
@@ -312,9 +319,4 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
         "label": str(frameId),
         "method": "animate"}
 
-    # TODO 
-    # Pour ajouter d'autres visualisation à une figure 
-    # Exemple
-    if False : 
-        data.append(go.Scatter())
     return data, slider_step
