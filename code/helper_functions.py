@@ -160,5 +160,33 @@ def ball_qb_hands(gameId, playId, scouting_data, tracking_data, seuil = 1):
     tracking_data.loc[tracking_data["ballInQBHands"] > seuil, "ballInQBHands"] = 0
     return tracking_data
 
+def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5):   
+    """
+    Ajoute un booléen (beaten) à tracking_data indiquant si le joueur a été battu (1) ou non (0)
+    """
+    scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
+    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
+    tracking_data = tracking_data.assign(beaten = np.nan)
+    n_frame = tracking_data.frameId.unique().shape[0]
+    qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
+    pass_block = scouting_data.query("pff_role == 'Pass Block'").nflId.values
+    
+    for frame in np.arange(n_frame)+1:
+        data = tracking_data.query(f"frameId == {frame}").copy()
+        qb = tracking_data.query(f"nflId == {qbId} & frameId == {frame}").copy()
+        for player in pass_block:
+            player_data = data.query(f"nflId == {player}")
+            opponentId = scouting_data.query(f"nflId == {player}").pff_nflIdBlockedPlayer.values[0]
+            opponent = tracking_data.query(f"nflId == {opponentId} & frameId == {frame}")
+            dist_qb_def = distance(qb.x.values,qb.y.values,opponent.x.values,opponent.y.values)[0]
+            dist_qb_off = distance(qb.x.values,qb.y.values,player_data.x.values,player_data.y.values)[0]
+            diff = dist_qb_off - dist_qb_def
+            if diff >= seuil:
+                data.loc[data["nflId"] == player,"beaten"] = 1
+            else: 
+                data.loc[data["nflId"] == player,"beaten"] = 0
+            tracking_data.loc[tracking_data["frameId"] == frame] = data
+    return tracking_data
+
 
 
