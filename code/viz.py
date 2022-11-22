@@ -223,7 +223,7 @@ def create_field(data, line_of_scrimmage = None, first_down_marker = None):
     )
     return data
 
-def add_players_viz(data, selected_tracking_df, frameId, displayOrientations = False):
+def add_players_viz(data, selected_tracking_df, displayOrientations = False):
     """Ajoute les joueurs sur la viz du terrain"""
     # Plot Players
     for team in selected_tracking_df.team.unique():
@@ -231,6 +231,7 @@ def add_players_viz(data, selected_tracking_df, frameId, displayOrientations = F
         if team != "football":
             hover_text_array=[]
             for nflId in plot_df.nflId:
+                print(nflId)
                 selected_player_df = plot_df[plot_df.nflId==nflId]
                 hover_text_array.append("nflId:{}<br>displayName:{}<br>Position:{}<br>Role:{}".format(selected_player_df["nflId"].values[0],
                                                                                     selected_player_df["displayName"].values[0],
@@ -290,15 +291,14 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
     data = []
     selected_tracking_df = tracking_df[tracking_df.frameId == frameId]
     data = create_field(data, line_of_scrimmage, first_down_marker)
-    
+    data = add_players_viz(data, selected_tracking_df, displayOrientations)
     if displayZone :
         offensive_points = get_Oline_position(selected_tracking_df)
         defensive_points = get_Dline_position(selected_tracking_df)
         QB_zone = calculate_Oline_zones(offensive_points, line_of_scrimmage)
         region_polys, region_pts, players_points = calculate_voronoi_zones(QB_zone, offensive_points, defensive_points)
         data = add_zone(data, region_polys, region_pts, players_points)
-    
-    data = add_players_viz(data, selected_tracking_df, displayOrientations)
+
     # add frame to slider
     slider_step = {"args": [
         [frameId],

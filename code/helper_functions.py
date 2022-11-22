@@ -67,8 +67,8 @@ def compute_orientation(data):
     return copy
 
 
-def face2face(gameId, playId, tracking_data, scouting_data):
-    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
+def face2face(gameId, playId, frameId, tracking_data, scouting_data):
+    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId} & frameId == {frameId}")
     scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
     """
     run in a for loop to compute for each play at each frame
@@ -85,7 +85,7 @@ def face2face(gameId, playId, tracking_data, scouting_data):
                                                                         "o_x_y" : "o_x_def",
                                                                         "o_y_y" : "o_y_def",})
 
-    data_with_opp_orientation["f2f"] = data_with_opp_orientation.o_x_off*data_with_opp_orientation.o_x_def < 0
+    data_with_opp_orientation["isBeaten"] = data_with_opp_orientation.o_x_off*data_with_opp_orientation.o_x_def > 0
     return data_with_opp_orientation
     
 
