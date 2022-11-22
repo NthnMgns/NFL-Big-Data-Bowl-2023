@@ -231,7 +231,7 @@ def add_players_viz(data, selected_tracking_df, displayOrientations = False):
         if team != "football":
             hover_text_array=[]
             for nflId in plot_df.nflId:
-                print(nflId)
+                #print(nflId)
                 selected_player_df = plot_df[plot_df.nflId==nflId]
                 hover_text_array.append("nflId:{}<br>displayName:{}<br>Position:{}<br>Role:{}".format(selected_player_df["nflId"].values[0],
                                                                                     selected_player_df["displayName"].values[0],
