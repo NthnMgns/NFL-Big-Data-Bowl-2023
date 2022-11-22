@@ -298,8 +298,7 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
     if displayZone :
         offensive_points = get_Oline_position(selected_tracking_df)
         defensive_points = get_Dline_position(selected_tracking_df)
-        points = pd.concat([offensive_points,defensive_points])
-        QB_zone = calculate_Oline_zones(points, line_of_scrimmage)
+        QB_zone = calculate_Oline_zones(offensive_points, line_of_scrimmage)
         region_polys, region_pts, players_points = calculate_voronoi_zones(QB_zone, offensive_points, defensive_points)
         data = add_zone(data, region_polys, region_pts, players_points)
     

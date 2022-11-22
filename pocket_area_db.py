@@ -35,8 +35,7 @@ for gameId in tqdm(gameIds) :
     n = 0
     df_plays = list()
     for playId in tqdm(playIds):
-        n += 1
-        #
+        
         # Boucle sur les séquences de passe
         selected_play_df = df_play[(df_play.playId==playId)&(df_play.gameId==gameId)].copy()    
         tracking_players_df = pd.merge(df_tracking,df_players,how="left",on = "nflId")
@@ -71,6 +70,6 @@ for gameId in tqdm(gameIds) :
     df_plays.loc[:, 'gameId'] = gameId
     df_games.append(df_plays)
     df_plays.to_csv(f'data/area/match/week{week}_{gameId}.csv')
-    break
+    
 df_games = pd.concat(df_games)
 df_games.to_csv(f'data/area/week{week}.csv')
