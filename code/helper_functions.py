@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import glob
 import numpy as np
+import math
 import plotly.graph_objects as go
 import plotly.io as pio
 pio.renderers.default = "browser"
@@ -142,7 +143,7 @@ def compute_matchup(gameId, playId, scouting_data, tracking_data):
 
 def ball_qb_hands(gameId, playId, scouting_data, tracking_data, seuil = 1):
     """
-    Ajoute un booléen à tracking_data indiquant si la balle est dans les mains du QB (1) ou non (0).
+    Ajoute un booléen (ballInQBHands) à tracking_data indiquant si la balle est dans les mains du QB (1) ou non (0).
     """
     qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
     qb = tracking_data.query(f"nflId == {qbId} & gameId == {gameId} & playId == {playId}")
@@ -171,16 +172,16 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
         qb = tracking_data.query(f"nflId == {qbId} & frameId == {frame}").copy()
         for player in pass_block:
             player_data = data.query(f"nflId == {player}")
-            opponentId = scouting_data.query(f"nflId == {player}").pff_nflIdBlockedPlayer.values[0]
-            opponent = tracking_data.query(f"nflId == {opponentId} & frameId == {frame}")
-            dist_qb_def = distance(qb.x.values,qb.y.values,opponent.x.values,opponent.y.values)[0]
-            dist_qb_off = distance(qb.x.values,qb.y.values,player_data.x.values,player_data.y.values)[0]
-            diff = dist_qb_off - dist_qb_def
-            if diff >= seuil:
-                data.loc[data["nflId"] == player,"beaten"] = 1
-            else: 
-                data.loc[data["nflId"] == player,"beaten"] = 0
-            tracking_data.loc[tracking_data["frameId"] == frame] = data
+            opponentId = scouting_data.query(f"nflId == {player}").pff_nflIdBlockedPlayer.values
+            if not math.isnan(opponentId):
+                opponent = tracking_data.query(f"nflId == {opponentId} & frameId == {frame}")
+                dist_qb_def = distance(qb.x.values,qb.y.values,opponent.x.values,opponent.y.values)[0]
+                dist_qb_off = distance(qb.x.values,qb.y.values,player_data.x.values,player_data.y.values)[0]
+                diff = dist_qb_off - dist_qb_def
+                if diff >= seuil:
+                    data.loc[data["nflId"] == player,"beaten"] = 1
+                else: 
+                    data.loc[data["nflId"] == player,"beaten"] = 0
+                tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
-
 
