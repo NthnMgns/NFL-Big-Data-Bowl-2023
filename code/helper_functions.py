@@ -7,51 +7,54 @@ import plotly.io as pio
 pio.renderers.default = "browser"
 
 from scipy.spatial import Voronoi, ConvexHull
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
+from geovoronoi import voronoi_regions_from_coords
 
 # ------------------------------------------------------ #
 #                 Définition de la poche                 #
 # ------------------------------------------------------ #
 
-def get_player_position(selected_tracking_df, frameId):
-    """Récupère la position des joueurs sur le terrain pour une frame donnée (selected_tracking_df, frame)"""
-    points = list()
-    for team in selected_tracking_df.team.unique():
-        plot_df = selected_tracking_df[(selected_tracking_df.team==team)&(selected_tracking_df.frameId==frameId)].copy()
-        if team != "football":
-            mask = plot_df.pff_role.isin(['Pass Block', 'Pass'])
-            #mask = plot_df.index
-            points.append(plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']])
-    points = pd.concat(points).reset_index().drop(columns = ['index'])
+def get_Oline_position(selected_tracking_df):
+    """Récupère la position des joueurs de la O-line"""
+    plot_df = selected_tracking_df.copy()
+    mask = plot_df.pff_role.isin(['Pass Block', 'Pass'])
+    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']]
+    points = points.reset_index().drop(columns = ['index'])
     return points
 
-def calculate_voronoi_zones(points):
+def get_Dline_position(selected_tracking_df):
+    """Récupère la position des joueurs de la D-line"""
+    plot_df = selected_tracking_df.copy()
+    mask = plot_df.pff_role.isin(['Pass Rush'])
+    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']]
+    points = points.reset_index().drop(columns = ['index'])
+    return points
+
+def calculate_voronoi_zones(QB_zone, offensice_points, defensive_points):
     """
     Calcul le graph de Voronoi pour un ensemble de points donnés.
     Inspired by : https://github.com/rjtavares/football-crunching/blob/master/notebooks/using%20voronoi%20diagrams.ipynb
     """
-    vor = Voronoi(points.loc[:, ["x", 'y']].values)
-    point_region = list(vor.point_region[:-4])
-    # A investir
-    for i in list(point_region):
-        if not i in points.index.tolist() :
-            point_region.remove(i)
-    points.loc[point_region, 'region'] = [i for i in range(len(point_region))]
-    voronoi_zone_points = list()
-    for index, region in enumerate(vor.regions):
-        if not -1 in region:
-            if len(region)>0:
-                pl = points[points['region']==index]
-                team = pl.iloc[0].team if not pl.empty else None
-                polygon = Polygon([vor.vertices[i] for i in region])
-                x, y = polygon.exterior.xy
-                voronoi_zone_points.append([list(x), list(y), team])
-    return voronoi_zone_points 
+    defensive_points.loc[:, 'isInQBzone'] = False
+    for i in range(len(defensive_points)):
+        point_x, point_y = defensive_points.iloc[i][['x', 'y']].values
+        if Point(point_x, point_y).within(Polygon(QB_zone)):
+            defensive_points.loc[i, 'isInQBzone'] = True
+    players_points = pd.concat([offensice_points, defensive_points[defensive_points.isInQBzone]]).reset_index().drop(columns = ['index'])
+    try :
+        region_polys, region_pts = voronoi_regions_from_coords(players_points[["x", "y"]].values, Polygon(QB_zone))
+    except : 
+        region_polys, region_pts = dict(), dict()
+        print("Le calcul du graph de voronoi a échoué")
+    return region_polys, region_pts, players_points
 
-def calculate_Oline_zones(points):
-    hull = ConvexHull(points.loc[:, ["x", 'y']].values)
-    np_points = points.loc[:, ["x", 'y', 'team']].values
-    return np_points[hull.vertices,0], np_points[hull.vertices,1], np_points[hull.vertices,2]
+def calculate_Oline_zones(points, line_of_scrimmage):
+    """Calcule la zone confexe formée par l'ensemble de la D-line + QB"""
+    y_max, y_min = 53.3, 0 #points.y.max(), points.y.min()
+    x_QB = points[points.officialPosition == 'QB'].iloc[0].x - 1
+    init_zone_points = np.array([[x_QB, y_max], [x_QB, y_min], [line_of_scrimmage, y_min], [line_of_scrimmage, y_max]]) #np.concatenate([points.loc[:, ["x", 'y']].values, [[x_QB, y_max], [x_QB, y_min]]])
+    hull = ConvexHull(init_zone_points[:, :2])
+    return init_zone_points[hull.vertices,:2]
 
 def compute_orientation(data):
     copy = data.copy()

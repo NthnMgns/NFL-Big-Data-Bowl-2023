@@ -223,11 +223,11 @@ def create_field(data, line_of_scrimmage = None, first_down_marker = None):
     )
     return data
 
-def add_players_viz(data, selected_tracking_df, frameId):
+def add_players_viz(data, selected_tracking_df):
     """Ajoute les joueurs sur la viz du terrain"""
     # Plot Players
     for team in selected_tracking_df.team.unique():
-        plot_df = selected_tracking_df[(selected_tracking_df.team==team)&(selected_tracking_df.frameId==frameId)].copy()
+        plot_df = selected_tracking_df[(selected_tracking_df.team==team)].copy()
         if team != "football":
             hover_text_array=[]
             for nflId in plot_df.nflId:
@@ -245,33 +245,58 @@ def add_players_viz(data, selected_tracking_df, frameId):
             data.append(go.Scatter(x=plot_df["x"], y=plot_df["y"],mode = 'markers', marker_line_width=2, marker_size=10, marker_color=colors_teams[team],name=team,hoverinfo='none'))
     return data
 
-def add_zone(data, voronoi_points):
+def add_zone(data, region_polys, region_pts, players_points):
     """Colorie les zones de voronoi de chaque joueur"""
-    x, y, team = voronoi_points
-    data.append(go.Scatter(
-            x=x, 
-            y=y, 
-            mode='lines',
-            fill="toself", 
-            opacity=0.5,
-            fillcolor = colors_teams[team[0]]
-            )
-        )
+    for n, mpoly in enumerate(region_polys.values()):
+        try :
+            x, y = mpoly.exterior.coords.xy
+            team = players_points.loc[region_pts[n]].iloc[0].team
+            data.append(go.Scatter(
+                    x=list(x), 
+                    y=list(y), 
+                    mode='lines',
+                    line=dict(width=0.1, color=colors_teams[team]),
+                    fill="toself", 
+                    opacity=0.5,
+                    fillcolor = colors_teams[team],
+                    showlegend=False,
+                    hoverinfo='none'
+                    )
+                )
+        except :
+            for poly in mpoly.geoms :
+                x, y = poly.exterior.coords.xy
+                team = players_points.loc[region_pts[n]].iloc[0].team
+                data.append(go.Scatter(
+                        x=list(x), 
+                        y=list(y), 
+                        mode='lines',
+                        line=dict(width=0.1, color=colors_teams[team]),
+                        fill="toself", 
+                        opacity=0.5,
+                        fillcolor = colors_teams[team],
+                        showlegend=False,
+                        hoverinfo='none'
+                        )
+                    )
     return data
 
 def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None, 
-            selected_tracking_df = pd.DataFrame(),
+            tracking_df = pd.DataFrame(),
             displayZone = False) :
     """Créer l'ensemble des visualisations nécessaires à une frame"""
     data = []
+    selected_tracking_df = tracking_df[tracking_df.frameId == frameId]
     data = create_field(data, line_of_scrimmage, first_down_marker)
-    if displayZone :
-        points = get_player_position(selected_tracking_df, frameId)
-        #voronoi_points = calculate_voronoi_zones(points)
-        D_lines_points = calculate_Oline_zones(points)
-        data = add_zone(data, D_lines_points)
-    data = add_players_viz(data, selected_tracking_df, frameId)
     
+    if displayZone :
+        offensive_points = get_Oline_position(selected_tracking_df)
+        defensive_points = get_Dline_position(selected_tracking_df)
+        QB_zone = calculate_Oline_zones(offensive_points, line_of_scrimmage)
+        region_polys, region_pts, players_points = calculate_voronoi_zones(QB_zone, offensive_points, defensive_points)
+        data = add_zone(data, region_polys, region_pts, players_points)
+    
+    data = add_players_viz(data, selected_tracking_df)
     # add frame to slider
     slider_step = {"args": [
         [frameId],
