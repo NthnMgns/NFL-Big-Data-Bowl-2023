@@ -18,7 +18,7 @@ def get_Oline_position(selected_tracking_df):
     """Récupère la position des joueurs de la O-line"""
     plot_df = selected_tracking_df.copy()
     mask = plot_df.pff_role.isin(['Pass Block', 'Pass'])
-    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']]
+    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition', 'beaten']]
     points = points.reset_index().drop(columns = ['index'])
     return points
 
@@ -26,11 +26,11 @@ def get_Dline_position(selected_tracking_df):
     """Récupère la position des joueurs de la D-line"""
     plot_df = selected_tracking_df.copy()
     mask = plot_df.pff_role.isin(['Pass Rush'])
-    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']]
+    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition', 'beaten']]
     points = points.reset_index().drop(columns = ['index'])
     return points
 
-def calculate_voronoi_zones(QB_zone, offensice_points, defensive_points):
+def calculate_voronoi_zones(QB_zone, offensive_points, defensive_points):
     """
     Calcul le graph de Voronoi pour un ensemble de points donnés.
     Inspired by : https://github.com/rjtavares/football-crunching/blob/master/notebooks/using%20voronoi%20diagrams.ipynb
@@ -40,12 +40,12 @@ def calculate_voronoi_zones(QB_zone, offensice_points, defensive_points):
         point_x, point_y = defensive_points.iloc[i][['x', 'y']].values
         if Point(point_x, point_y).within(Polygon(QB_zone)):
             defensive_points.loc[i, 'isInQBzone'] = True
-    players_points = pd.concat([offensice_points, defensive_points[defensive_points.isInQBzone]]).reset_index().drop(columns = ['index'])
+    # Prise en compte des joueurs qui ne sont pas battus
+    players_points = pd.concat([offensive_points[~offensive_points.beaten], defensive_points[defensive_points.isInQBzone]]).reset_index().drop(columns = ['index'])
     try :
         region_polys, region_pts = voronoi_regions_from_coords(players_points[["x", "y"]].values, Polygon(QB_zone))
     except : 
         region_polys, region_pts = dict(), dict()
-        print("Le calcul du graph de voronoi a échoué")
     return region_polys, region_pts, players_points
 
 def calculate_Oline_zones(points, line_of_scrimmage):
@@ -166,7 +166,7 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
     """
     scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
     tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
-    tracking_data = tracking_data.assign(beaten = np.nan)
+    tracking_data = tracking_data.assign(beaten = False)
     n_frame = tracking_data.frameId.unique().shape[0]
     qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
     pass_block = scouting_data.query("pff_role == 'Pass Block'").nflId.values
@@ -182,9 +182,9 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
             dist_qb_off = distance(qb.x.values,qb.y.values,player_data.x.values,player_data.y.values)[0]
             diff = dist_qb_off - dist_qb_def
             if diff >= seuil:
-                data.loc[data["nflId"] == player,"beaten"] = 1
+                data.loc[data["nflId"] == player,"beaten"] = True
             else: 
-                data.loc[data["nflId"] == player,"beaten"] = 0
+                data.loc[data["nflId"] == player,"beaten"] = False
             tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
 
