@@ -63,6 +63,9 @@ def animate_play(tracking_df, play_df,players,pffScoutingData, gameId,playId, di
     sorted_frame_list = selected_tracking_df.frameId.unique()
     sorted_frame_list.sort()
 
+    # Calcul attaquant battu ?
+    selected_tracking_df = beaten_by_defender(gameId, playId, pffScoutingData, selected_tracking_df, seuil = 0.5)
+    
     # get play General information 
     line_of_scrimmage = selected_play_df.absoluteYardlineNumber.values[0]
     first_down_marker = line_of_scrimmage + selected_play_df.yardsToGo.values[0]

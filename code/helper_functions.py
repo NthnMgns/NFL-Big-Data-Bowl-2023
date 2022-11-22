@@ -2,6 +2,7 @@ import pandas as pd
 import os
 import glob
 import numpy as np
+import math
 import plotly.graph_objects as go
 import plotly.io as pio
 pio.renderers.default = "browser"
@@ -18,7 +19,7 @@ def get_Oline_position(selected_tracking_df):
     """Récupère la position des joueurs de la O-line"""
     plot_df = selected_tracking_df.copy()
     mask = plot_df.pff_role.isin(['Pass Block', 'Pass'])
-    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']]
+    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition', 'beaten']]
     points = points.reset_index().drop(columns = ['index'])
     return points
 
@@ -26,11 +27,11 @@ def get_Dline_position(selected_tracking_df):
     """Récupère la position des joueurs de la D-line"""
     plot_df = selected_tracking_df.copy()
     mask = plot_df.pff_role.isin(['Pass Rush'])
-    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition']]
+    points = plot_df.loc[mask, ['x', 'y', 'team', 'officialPosition', 'beaten']]
     points = points.reset_index().drop(columns = ['index'])
     return points
 
-def calculate_voronoi_zones(QB_zone, offensice_points, defensive_points):
+def calculate_voronoi_zones(QB_zone, offensive_points, defensive_points):
     """
     Calcul le graph de Voronoi pour un ensemble de points donnés.
     Inspired by : https://github.com/rjtavares/football-crunching/blob/master/notebooks/using%20voronoi%20diagrams.ipynb
@@ -40,12 +41,12 @@ def calculate_voronoi_zones(QB_zone, offensice_points, defensive_points):
         point_x, point_y = defensive_points.iloc[i][['x', 'y']].values
         if Point(point_x, point_y).within(Polygon(QB_zone)):
             defensive_points.loc[i, 'isInQBzone'] = True
-    players_points = pd.concat([offensice_points, defensive_points[defensive_points.isInQBzone]]).reset_index().drop(columns = ['index'])
+    # Prise en compte des joueurs qui ne sont pas battus
+    players_points = pd.concat([offensive_points[~offensive_points.beaten], defensive_points[defensive_points.isInQBzone]]).reset_index().drop(columns = ['index'])
     try :
         region_polys, region_pts = voronoi_regions_from_coords(players_points[["x", "y"]].values, Polygon(QB_zone))
     except : 
         region_polys, region_pts = dict(), dict()
-        print("Le calcul du graph de voronoi a échoué")
     return region_polys, region_pts, players_points
 
 def calculate_Oline_zones(points, line_of_scrimmage):
@@ -67,6 +68,7 @@ def pocketArea(region_polys, region_pts, players_points):
     for i in region_polys_ids:
         team_area += region_polys[i].area    
     return team_area
+
 # ------------------------------------------------- #
 #          Calcul Orientations et face à face       #
 # ------------------------------------------------- #
@@ -99,17 +101,10 @@ def face2face(tracking_data, scouting_data):
 
     data_with_opp_orientation["isBeaten"] = data_with_opp_orientation.o_x*data_with_opp_orientation.o_x_opp > 0
     return data_with_opp_orientation
-    
-
-
-    
-
-
 
 # ------------------------------------------------- #
 #          Création de nouvelles variables          #
 # ------------------------------------------------- #
-
 
 def distance(x1,y1,x2,y2):
     """
@@ -123,7 +118,8 @@ def nearest_player(nflId, gameId, playId, frameId, tracking_data):
     Retourne l'id du joueur le plus proche de nflId.
     """
     player = tracking_data.query(f"nflId == {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId}")
-    other = tracking_data.query(f"nflId != {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId} & team != 'football'")
+    player_team = player.team.values[0]
+    other = tracking_data.query(f"nflId != {nflId} & gameId == {gameId} & playId == {playId} & frameId == {frameId} & team != 'football' & team != '{player_team}'")
     dist = distance(player.x.values,player.y.values,other.x.values,other.y.values)
     return other.nflId.values[np.argmin(dist)]  
 
@@ -147,7 +143,7 @@ def compute_matchup(gameId, playId, scouting_data, tracking_data):
 
 def ball_qb_hands(gameId, playId, scouting_data, tracking_data, seuil = 1):
     """
-    Ajoute un booléen à tracking_data indiquant si la balle est dans les mains du QB (1) ou non (0).
+    Ajoute un booléen (ballInQBHands) à tracking_data indiquant si la balle est dans les mains du QB (1) ou non (0).
     """
     qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
     qb = tracking_data.query(f"nflId == {qbId} & gameId == {gameId} & playId == {playId}")
@@ -166,7 +162,7 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
     """
     scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
     tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
-    tracking_data = tracking_data.assign(beaten = np.nan)
+    tracking_data = tracking_data.assign(beaten = False)
     n_frame = tracking_data.frameId.unique().shape[0]
     qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
     pass_block = scouting_data.query("pff_role == 'Pass Block'").nflId.values
@@ -176,17 +172,16 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
         qb = tracking_data.query(f"nflId == {qbId} & frameId == {frame}").copy()
         for player in pass_block:
             player_data = data.query(f"nflId == {player}")
-            opponentId = scouting_data.query(f"nflId == {player}").pff_nflIdBlockedPlayer.values[0]
-            opponent = tracking_data.query(f"nflId == {opponentId} & frameId == {frame}")
-            dist_qb_def = distance(qb.x.values,qb.y.values,opponent.x.values,opponent.y.values)[0]
-            dist_qb_off = distance(qb.x.values,qb.y.values,player_data.x.values,player_data.y.values)[0]
-            diff = dist_qb_off - dist_qb_def
-            if diff >= seuil:
-                data.loc[data["nflId"] == player,"beaten"] = 1
-            else: 
-                data.loc[data["nflId"] == player,"beaten"] = 0
-            tracking_data.loc[tracking_data["frameId"] == frame] = data
+            opponentId = scouting_data.query(f"nflId == {player}").pff_nflIdBlockedPlayer.values
+            if not math.isnan(opponentId):
+                opponent = tracking_data.query(f"nflId == {opponentId} & frameId == {frame}")
+                dist_qb_def = distance(qb.x.values,qb.y.values,opponent.x.values,opponent.y.values)[0]
+                dist_qb_off = distance(qb.x.values,qb.y.values,player_data.x.values,player_data.y.values)[0]
+                diff = dist_qb_off - dist_qb_def
+                if diff >= seuil:
+                    data.loc[data["nflId"] == player,"beaten"] = True
+                else: 
+                    data.loc[data["nflId"] == player,"beaten"] = False
+                tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
-
-
 
