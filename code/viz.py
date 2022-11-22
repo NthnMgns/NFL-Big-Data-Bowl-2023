@@ -290,7 +290,8 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
     data = []
     selected_tracking_df = tracking_df[tracking_df.frameId == frameId]
     data = create_field(data, line_of_scrimmage, first_down_marker)
-    
+    data = add_players_viz(data, selected_tracking_df, displayOrientations)
+
     if displayZone :
         offensive_points = get_Oline_position(selected_tracking_df)
         defensive_points = get_Dline_position(selected_tracking_df)
@@ -298,7 +299,6 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
         region_polys, region_pts, players_points = calculate_voronoi_zones(QB_zone, offensive_points, defensive_points)
         data = add_zone(data, region_polys, region_pts, players_points)
     
-    data = add_players_viz(data, selected_tracking_df, displayOrientations)
     # add frame to slider
     slider_step = {"args": [
         [frameId],

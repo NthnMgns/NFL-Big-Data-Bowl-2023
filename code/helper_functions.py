@@ -50,12 +50,23 @@ def calculate_voronoi_zones(QB_zone, offensice_points, defensive_points):
 
 def calculate_Oline_zones(points, line_of_scrimmage):
     """Calcule la zone confexe formée par l'ensemble de la D-line + QB"""
-    y_max, y_min = 53.3, 0 #points.y.max(), points.y.min()
-    x_QB = points[points.officialPosition == 'QB'].iloc[0].x - 1
-    init_zone_points = np.array([[x_QB, y_max], [x_QB, y_min], [line_of_scrimmage, y_min], [line_of_scrimmage, y_max]]) #np.concatenate([points.loc[:, ["x", 'y']].values, [[x_QB, y_max], [x_QB, y_min]]])
+    y_max, y_min = points.y.max(), points.y.min()
+    x_QB = points[points.officialPosition == 'QB'].iloc[0].x 
+    init_zone_points = np.concatenate([points.loc[:, ["x", 'y']].values, [[x_QB, y_max], [x_QB, y_min]]]) #np.array([[x_QB, y_max], [x_QB, y_min], [line_of_scrimmage, y_min], [line_of_scrimmage, y_max]])
     hull = ConvexHull(init_zone_points[:, :2])
     return init_zone_points[hull.vertices,:2]
 
+def pocketArea(region_polys, region_pts, players_points):
+    """Calcul pour 1 frame l'aire de la poche du QB"""
+    team = players_points[players_points.officialPosition == 'QB'].iloc[0].team
+    region_polys_ids = list()
+    for i in region_pts.keys() :
+        if players_points.iloc[region_pts[i]].iloc[0].team == team :
+            region_polys_ids.append(i)
+    team_area = 0
+    for i in region_polys_ids:
+        team_area += region_polys[i].area    
+    return team_area
 # ------------------------------------------------- #
 #          Calcul Orientations et face à face       #
 # ------------------------------------------------- #
