@@ -143,7 +143,7 @@ def compute_matchup(gameId, playId, scouting_data, tracking_data):
 
 def ball_qb_hands(gameId, playId, scouting_data, tracking_data, seuil = 1):
     """
-    Ajoute un booléen (ballInQBHands) à tracking_data indiquant si la balle est dans les mains du QB (1) ou non (0).
+    Ajoute une variable binaire (ballInQBHands) à tracking_data indiquant si la balle est dans les mains du QB (1) ou non (0).
     """
     qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
     qb = tracking_data.query(f"nflId == {qbId} & gameId == {gameId} & playId == {playId}")
@@ -158,13 +158,13 @@ def ball_qb_hands(gameId, playId, scouting_data, tracking_data, seuil = 1):
 
 def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5):   
     """
-    Ajoute un booléen (beaten) à tracking_data indiquant si le joueur a été battu (1) ou non (0)
+    Ajoute une variable binaire (beaten) à tracking_data indiquant si le joueur a été battu (1) ou non (0)
     """
     scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
     tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
     tracking_data = tracking_data.assign(beaten = False)
     n_frame = tracking_data.frameId.unique().shape[0]
-    qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
+    qbId = scouting_data.query("pff_role == 'Pass'").nflId.values[0]
     pass_block = scouting_data.query("pff_role == 'Pass Block'").nflId.values
     
     for frame in np.arange(n_frame)+1:
@@ -184,4 +184,29 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
                     data.loc[data["nflId"] == player,"beaten"] = False
                 tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
+
+def scramble(gameId, playId, scouting_data, tracking_data, seuil = 0.5):
+    """
+    Ajoute une variable binaire (scramble) à tracking_data indiquant si le QB scramble (1) ou non (0).
+    """
+    scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
+    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
+    tracking_data = tracking_data.assign(scramble = np.nan)
+    n_frame = tracking_data.frameId.unique().shape[0]
+    qbId = scouting_data.query("pff_role == 'Pass'").nflId.values[0]
+    pass_block = scouting_data.query("pff_role == 'Pass Block'").nflId.values
+    
+    for frame in np.arange(n_frame)+1:
+        data = tracking_data.query(f"frameId == {frame}").copy()
+        qb_y = data.query(f"nflId == {qbId}").y.values[0]
+        oline_y = data.query(f"nflId in {pass_block.tolist()}").y.values.tolist()
+        y = [qb_y+seuil,qb_y-seuil]
+        y.extend(oline_y)
+        if np.argmin(y) in [0,1] or np.argmax(y) in [0,1]:
+            data.loc[data["nflId"] == qbId,"scramble"] = 1
+        else:
+            data.loc[data["nflId"] == qbId,"scramble"] = 0
+        tracking_data.loc[tracking_data["frameId"] == frame] = data
+    return tracking_data
+
 
