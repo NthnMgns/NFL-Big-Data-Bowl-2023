@@ -205,7 +205,7 @@ def scramble(gameId, playId, scouting_data, tracking_data, seuil = 1):
         oline_x = data.query(f"nflId in {pass_block.tolist()}").x.values.tolist()
         max_y_oline = oline_y[np.argmax(oline_y)]
         min_y_oline = oline_y[np.argmin(oline_y)]
-        x = [qb_x+seuil]
+        x = [qb_x]
         x.extend(oline_x)
         if direction == "right":
             value = np.argmax(x)
