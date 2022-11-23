@@ -234,9 +234,13 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
         frame_qb_run = 1e6
 
     if playresult in ["C","I","IN"]:
-        t_event = event.index("pass_forward")+1
+        if "pass_forward" in event : 
+            t_event = event.index("pass_forward")+1
+        else : 
+            t_event = event.index("autoevent_passforward")+1
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = ["scramble","pass"][np.argmin([frame_qb_run,t_event])]
+            
     elif playresult == "S":
         t_event = event.index("qb_sack")+1
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
