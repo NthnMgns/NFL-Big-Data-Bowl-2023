@@ -209,4 +209,19 @@ def scramble(gameId, playId, scouting_data, tracking_data, seuil = 0.5):
         tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
 
+def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
+    """
+    Détermine t_event (frame où le QB lance, court, ou se fait sack) d'un jeu.
+    """
+    playresult = plays.query(f"gameId == {gameId} & playId == {playId}").passResult.values
+    qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
+    event = tracking_data.query(f"gameId == {gameId} & playId == {playId} & nflId == {qbId}").event.values.tolist()
+    if playresult in ["C","I","IN"]:
+        t_event = event.index("pass_forward")+1
+    elif playresult == "S":
+        t_event = event.index("qb_sack")+1
+    elif playresult == "R":
+        t_event = event.index("run")+1
+    return t_event
+
 
