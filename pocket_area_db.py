@@ -69,7 +69,7 @@ for gameId in tqdm(gameIds) :
             df_aire = pd.concat(list_aire_t)
             df_aire.loc[:, 'playId'] = play
         except : 
-            print('Problème pour gameId, playId, frameId : ' + str((gameId, playId)))
+            print('Problème pour gameId, playId, frameId : ' + str((gameId, play)))
         return df_aire
 
     with Pool() as mp_pool:
