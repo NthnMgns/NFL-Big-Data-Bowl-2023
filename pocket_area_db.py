@@ -7,7 +7,13 @@ import time
 sys.path.insert(0, os.getcwd() + '/code')
 from viz import *
 from helper_functions import * 
+import argparse
+from multiprocessing import Pool
 
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--week', type=int, help='week')
+args = parser.parse_args()
 # ------------------------------------------------- #
 #  Lecture des dataframes             
 
@@ -18,9 +24,9 @@ df_pffScoutingData = pd.read_csv("data/pffScoutingData.csv")
 
 # ------------------------------------------------- #
 #  Numéro de la semaine 
-week = 2
+week = args.week
 df_tracking = pd.read_csv(f"data/week{week}.csv")
-
+print(f'Area computation for week : {args.week}')
 # ------------------------------------------------- #
 #  Process
 
@@ -32,15 +38,16 @@ for gameId in tqdm(gameIds) :
     # Boucle des matchs 
     playIds = df_play[df_play.gameId==gameId].playId.unique()
     playIds.sort()
+    #print(playIds)
+
     df_plays = list()
-    for playId in tqdm(playIds):
-        
-        # Boucle sur les séquences de passe
-        selected_play_df = df_play[(df_play.playId==playId)&(df_play.gameId==gameId)].copy()    
+    global area_one_play
+    def area_one_play(play):
+        selected_play_df = df_play[(df_play.playId==play)&(df_play.gameId==gameId)].copy()    
         tracking_players_df = pd.merge(df_tracking,df_players,how="left",on = "nflId")
         tracking_players_df = pd.merge(tracking_players_df,df_pffScoutingData,how="left",on = ["nflId","playId","gameId"])
-        selected_tracking_df = tracking_players_df[(tracking_players_df.playId==playId)&(tracking_players_df.gameId==gameId)].copy()
-        selected_tracking_df = beaten_by_defender(gameId, playId, df_pffScoutingData, selected_tracking_df, seuil = 0.5)
+        selected_tracking_df = tracking_players_df[(tracking_players_df.playId==play)&(tracking_players_df.gameId==gameId)].copy()
+        selected_tracking_df = beaten_by_defender(gameId, play, df_pffScoutingData, selected_tracking_df, seuil = 0.5)
 
         # Liste des frames
         sorted_frame_list = selected_tracking_df.frameId.unique()
@@ -59,12 +66,12 @@ for gameId in tqdm(gameIds) :
             region_polys, region_pts, players_points = calculate_voronoi_zones(QB_zone, offensive_points, defensive_points)
             list_aire_t.append(pd.DataFrame([[frameId, pocketArea(region_polys, region_pts, players_points)]], columns = ['frameId', 'Area']))
         df_aire = pd.concat(list_aire_t)
-        df_aire.loc[:, 'playId'] = playId
-        df_plays.append(df_aire)
+        df_aire.loc[:, 'playId'] = play
+        return df_aire
 
-        #except : 
-        #    print('Problème pour gameId, playId, frameId : ' + str((gameId, playId)))
-        #    continue
+    with Pool() as mp_pool:
+        df_plays = mp_pool.map(area_one_play, playIds)
+
     df_plays = pd.concat(df_plays)
     df_plays.loc[:, 'gameId'] = gameId
     df_games.append(df_plays)
