@@ -209,4 +209,17 @@ def scramble(gameId, playId, scouting_data, tracking_data, seuil = 0.5):
         tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
 
+# ------------------------------------------------- #
+#                 Machine Learning                  #
+# ------------------------------------------------- #
 
+def etl(gameIds, list_feature):
+    """Sélectionne et transforme les données pour former un dataframe unique"""
+    df_features = list()
+    for feature in list_feature :
+        feature_set = feature.split(gameIds)
+        df_features.append(feature_set.transform())
+    df_features = pd.concat(df_features, axis = 1)
+    # Fill NA with 0
+    df_features = df_features.fillna(0)
+    return df_features

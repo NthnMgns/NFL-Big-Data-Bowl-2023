@@ -29,7 +29,6 @@ df_tracking = pd.read_csv(f"data/week{week}.csv")
 print(f'Area computation for week : {args.week}')
 # ------------------------------------------------- #
 #  Process
-
 # TODO delete play action 
 
 gameIds = df_tracking.gameId.unique()
