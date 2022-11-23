@@ -68,9 +68,10 @@ for gameId in tqdm(gameIds) :
                 list_aire_t.append(pd.DataFrame([[frameId, pocketArea(region_polys, region_pts, players_points)]], columns = ['frameId', 'Area']))
             df_aire = pd.concat(list_aire_t)
             df_aire.loc[:, 'playId'] = play
+            return df_aire
         except : 
             print('Problème pour gameId, playId, frameId : ' + str((gameId, play)))
-        return df_aire
+        
 
     with Pool() as mp_pool:
         df_plays = mp_pool.map(area_one_play, playIds)
