@@ -185,9 +185,9 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
                 tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
 
-def scramble(gameId, playId, scouting_data, tracking_data, seuil = 0.5):
+def scramble(gameId, playId, scouting_data, tracking_data, seuil = 1):
     """
-    Ajoute une variable binaire (scramble) à tracking_data indiquant si le QB scramble (1) ou non (0).
+    Ajoute une variable binaire (scramble) indiquant si le QB scramble (1) ou non (0)
     """
     scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
     tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
@@ -195,19 +195,54 @@ def scramble(gameId, playId, scouting_data, tracking_data, seuil = 0.5):
     n_frame = tracking_data.frameId.unique().shape[0]
     qbId = scouting_data.query("pff_role == 'Pass'").nflId.values[0]
     pass_block = scouting_data.query("pff_role == 'Pass Block'").nflId.values
+    direction = tracking_data.query(f"nflId == {qbId}").playDirection.values[0]
     
     for frame in np.arange(n_frame)+1:
         data = tracking_data.query(f"frameId == {frame}").copy()
         qb_y = data.query(f"nflId == {qbId}").y.values[0]
+        qb_x = data.query(f"nflId == {qbId}").x.values[0]
         oline_y = data.query(f"nflId in {pass_block.tolist()}").y.values.tolist()
-        y = [qb_y+seuil,qb_y-seuil]
-        y.extend(oline_y)
-        if np.argmin(y) in [0,1] or np.argmax(y) in [0,1]:
+        oline_x = data.query(f"nflId in {pass_block.tolist()}").x.values.tolist()
+        max_y_oline = oline_y[np.argmax(oline_y)]
+        min_y_oline = oline_y[np.argmin(oline_y)]
+        x = [qb_x+seuil]
+        x.extend(oline_x)
+        if direction == "right":
+            value = np.argmax(x)
+        else: 
+            value = np.argmin(x)
+        
+        if min_y_oline-qb_y > seuil or qb_y-max_y_oline > seuil or value == 0:
             data.loc[data["nflId"] == qbId,"scramble"] = 1
         else:
             data.loc[data["nflId"] == qbId,"scramble"] = 0
         tracking_data.loc[tracking_data["frameId"] == frame] = data
     return tracking_data
+
+def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
+    """
+    Détermine t_event (frame où le QB lance, court, ou se fait sack) d'un jeu.
+    """
+    playresult = plays.query(f"gameId == {gameId} & playId == {playId}").passResult.values
+    qbId = scouting_data.query(f"gameId == {gameId} & playId == {playId} & pff_role == 'Pass'").nflId.values[0]
+    event = tracking_data.query(f"gameId == {gameId} & playId == {playId} & nflId == {qbId}").event.values.tolist()
+    scramble_data = scramble(gameId, playId, scouting_data, tracking_data)
+    frame_qb_run = scramble_data.query(f"nflId == {qbId}").scramble.values.tolist()
+    frame_qb_run = frame_qb_run.index(1) + 1
+    
+    if playresult in ["C","I","IN"]:
+        t_event = event.index("pass_forward")+1
+        t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
+        type_event = ["scramble","pass"][np.argmin([frame_qb_run,t_event])]
+    elif playresult == "S":
+        t_event = event.index("qb_sack")+1
+        t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
+        type_event = ["scramble","sack"][np.argmin([frame_qb_run,t_event])]
+    elif playresult == "R":
+        t_event = event.index("run")+1
+        t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
+        type_event = "scramble"
+    return [type_event,t_event]
 
 # ------------------------------------------------- #
 #                 Machine Learning                  #
