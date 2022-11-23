@@ -228,8 +228,11 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
     event = tracking_data.query(f"gameId == {gameId} & playId == {playId} & nflId == {qbId}").event.values.tolist()
     scramble_data = scramble(gameId, playId, scouting_data, tracking_data)
     frame_qb_run = scramble_data.query(f"nflId == {qbId}").scramble.values.tolist()
-    frame_qb_run = frame_qb_run.index(1) + 1
-    
+    if 1 in frame_qb_run:
+        frame_qb_run = frame_qb_run.index(1) + 1
+    else : 
+        frame_qb_run = 1e6
+
     if playresult in ["C","I","IN"]:
         t_event = event.index("pass_forward")+1
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
