@@ -228,6 +228,12 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
     event = tracking_data.query(f"gameId == {gameId} & playId == {playId} & nflId == {qbId}").event.values.tolist()
     scramble_data = scramble(gameId, playId, scouting_data, tracking_data)
     frame_qb_run = scramble_data.query(f"nflId == {qbId}").scramble.values.tolist()
+    if "ball_snap" in event:
+        t_ball_snap = event.index("ball_snap")
+    elif "autoevent_ballsnap" in event:
+        t_ball_snap = event.index("autoevent_ballsnap")        
+    else:
+        t_ball_snap = 1
     if 1 in frame_qb_run:
         frame_qb_run = frame_qb_run.index(1) + 1
     else : 
@@ -262,7 +268,24 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
             t_event = np.max(scramble_data.frameId)
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = "scramble"
-    return [type_event,t_event]
+    return [type_event,t_event,t_ball_snap]
+
+def qb_position(gameId, playId, scouting_data, tracking_data):
+    """
+    Ajoute une variable binaire à tracking_data indiquant si le QB est en shotgun (1) ou non (0).
+    """
+    tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
+    tracking_data = tracking_data.assign(qbPosition = np.nan)
+    scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
+    qbId = scouting_data.query("pff_role == 'Pass'").nflId.values[0]
+    qbX = tracking_data.query(f"nflId == {qbId} & frameId == 1").x.values[0]
+    footballX = tracking_data.query("team == 'football' & frameId == 1").x.values[0]
+    diff = np.abs(qbX - footballX)
+    if diff >= 2:
+        tracking_data.qbPosition = 1
+    else:
+        tracking_data.qbPosition = 0
+    return tracking_data
 
 # ------------------------------------------------- #
 #                 Machine Learning                  #
