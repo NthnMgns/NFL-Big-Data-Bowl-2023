@@ -158,7 +158,7 @@ def ball_qb_hands(gameId, playId, scouting_data, tracking_data, seuil = 1):
 
 def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5):   
     """
-    Ajoute une variable binaire (beaten) à tracking_data indiquant si le joueur a été battu (1) ou non (0)
+    Ajoute une variable binaire (beaten) à tracking_data indiquant si le joueur a été battu (1) ou non (0).
     """
     scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
     tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
@@ -187,7 +187,7 @@ def beaten_by_defender(gameId, playId, scouting_data, tracking_data, seuil = 0.5
 
 def scramble(gameId, playId, scouting_data, tracking_data, seuil = 1):
     """
-    Ajoute une variable binaire (scramble) indiquant si le QB scramble (1) ou non (0)
+    Ajoute une variable binaire (scramble) indiquant si le QB scramble (1) ou non (0).
     """
     scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}")
     tracking_data = tracking_data.query(f"gameId == {gameId} & playId == {playId}")
@@ -286,6 +286,20 @@ def qb_position(gameId, playId, scouting_data, tracking_data):
     else:
         tracking_data.qbPosition = 0
     return tracking_data
+
+def weight_diff(gameId, playId, players_data, scouting_data):
+    """
+    Calcul la différence de poids entre l'attaquant et le défenseur.
+    """
+    scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}").loc[:,["nflId","pff_nflIdBlockedPlayer"]]
+    scouting_data = scouting_data[~scouting_data["pff_nflIdBlockedPlayer"].isnull()]
+    nflId = scouting_data.nflId.tolist()
+    nflId.extend(scouting_data.pff_nflIdBlockedPlayer.unique().tolist())
+    players_data = players_data.query(f"nflId in {nflId}").loc[:,["nflId","weight"]]
+    scouting_data = scouting_data.assign(weight_off = pd.merge(players_data,scouting_data.nflId,on="nflId").weight.values)
+    scouting_data = scouting_data.assign(weight_def = pd.merge(players_data.rename(columns={"nflId" : "pff_nflIdBlockedPlayer"}),scouting_data,on="pff_nflIdBlockedPlayer").weight.values)
+    scouting_data = scouting_data.assign(weight_diff = scouting_data.weight_off-scouting_data.weight_def)
+    return scouting_data
 
 # ------------------------------------------------- #
 #                 Machine Learning                  #

@@ -114,11 +114,26 @@ class nbBlock(Features):
         return df_transformed_data
 
 class QBPosition(Features):
-    """Variable qui renvoie si le QB est en shotgun ou non"""
+    """
+    Variable qui renvoie si le QB est en shotgun ou non.
+    Nécessite les données de tracking et de scouting.
+    """
     def __init__(self):
         super().__init__()
 
     def transform(self):
         df_transformed_data = self.df_dataraw[self.index + ["qbPosition"]].set_index(self.index)
+        return df_transformed_data
+    
+class weightDiffMatchup(Features):
+    """
+    Variable qui renvoie la différence de poids entre l'attaquant et le défenseur.
+    Nécessite les données sur les joueurs et de scouting.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.index + ["weigth_diff"]].set_index(self.index)
         return df_transformed_data
     

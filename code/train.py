@@ -12,6 +12,9 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 # Dataframe
 df_play = pd.read_csv("data/plays.csv")
 df_area = pd.read_csv("data/plays.csv")
+df_scouting = pd.read_csv("data/pffScoutingData.csv")
+df_players = pd.read_csv("data/players.csv")
+df_tracking = pd.read_csv("data/week1.csv")
 
 # TODO Simulation de données à supprimer
 df_area["t_c"] = [np.random.random() for i in range(len(df_area))]
@@ -22,7 +25,16 @@ df_area["t_c"] = [np.random.random() for i in range(len(df_area))]
 
 list_feature = [
     GeneralDescriptionPlay().read(df_play),
-    CriticalTime().read(df_area),
+    CharacteristicTime().read(df_area)
+    CharacteristicArea().read(df_area)
+    EventTime().read(df_area)
+    EventArea().read(df_area),
+    PocketLifeTime().read(df_area),
+    # CriticalTime().read(df_area),
+    nbRusher().read(df_scouting),
+    nbBlock().read(df_scouting)#,
+    # QBPosition().read(data)
+    # weightDiffMatchup().read(data)
 ]
 
 # ------------------------------------------------------ #
