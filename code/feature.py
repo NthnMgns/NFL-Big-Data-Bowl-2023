@@ -40,11 +40,52 @@ class GeneralDescriptionPlay(Features):
         df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
-class CriticalTime(Features):
+class CharacteristicTime(Features):
     """Variable qui renvoie le temps critique de la séquence de jeu"""
     def __init__(self):
         super().__init__()
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.index + ["t_c"]].set_index(self.index)
+        df_transformed_data = self.df_dataraw[self.index + ["tc"]].set_index(self.index)
         return df_transformed_data
+
+class CharacteristicArea(Features):
+    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    def __init__(self):
+        super().__init__()
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.index + ["Ac"]].set_index(self.index)
+        return df_transformed_data
+
+class EventTime(Features):
+    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    def __init__(self):
+        super().__init__()
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.index + ["te"]].set_index(self.index)
+        return df_transformed_data
+
+class EventArea(Features):
+    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    def __init__(self):
+        super().__init__()
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.index + ["Ae"]].set_index(self.index)
+        return df_transformed_data
+
+class PocketLifeTime(Features):
+    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    def __init__(self):
+        super().__init__()
+
+    def transform(self):
+        Acrit = 10
+        df_copy = copy.copy(self)
+        df_copy["lt"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) +df_copy.te
+        df_transformed_data = df_copy[df_copy.index + ["lt"]].set_index(df_copy.index)
+        return df_transformed_data
+
+
