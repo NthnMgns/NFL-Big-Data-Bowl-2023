@@ -236,17 +236,30 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
     if playresult in ["C","I","IN"]:
         if "pass_forward" in event : 
             t_event = event.index("pass_forward")+1
-        else : 
+        elif "autoevent_passforward" in event:
             t_event = event.index("autoevent_passforward")+1
+        else:
+            t_event = np.max(scramble_data.frameId)
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = ["scramble","pass"][np.argmin([frame_qb_run,t_event])]
             
     elif playresult == "S":
-        t_event = event.index("qb_sack")+1
+        if "qb_sack" in event:
+            t_event = event.index("qb_sack")+1
+        elif "pass_forward" in event:
+            t_event = event.index("pass_forward")+1
+        else:
+            t_event = np.max(scramble_data.frameId)
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = ["scramble","sack"][np.argmin([frame_qb_run,t_event])]
+    
     elif playresult == "R":
-        t_event = event.index("run")+1
+        if "run" in event:
+            t_event = event.index("run")+1
+        elif "pass_forward" in event:
+            t_event = event.index("pass_forward")+1
+        else:
+            t_event = np.max(scramble_data.frameId)
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = "scramble"
     return [type_event,t_event]
