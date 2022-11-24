@@ -7,6 +7,7 @@ sys.path.insert(0, os.getcwd() + '/code')
 from viz import *
 from helper_functions import * 
 from multiprocessing import Pool
+from scipy.signal import argrelextrema
 
 df_game = pd.read_csv("data/games.csv")
 df_tracking = pd.read_csv("data/week1.csv")
@@ -25,7 +26,7 @@ df_pffScoutingData = pd.read_csv("data/pffScoutingData.csv")
 
 def features_one_play(playId) : 
     gameId = df_area[df_area.playId == playId].gameId.unique()[0]
-    #print(f'{playId} - {gameId}')
+    print(f'{playId} - {gameId}')
     selected_area_df = df_area[(df_area.playId==playId)&(df_area.gameId==gameId)].copy() 
     selected_play_df = df_play[(df_play.playId==playId)&(df_play.gameId==gameId)].copy()  
     tracking_players_df = pd.merge(df_tracking,df_players,how="left",on = "nflId")
@@ -36,8 +37,13 @@ def features_one_play(playId) :
         selected_tracking_df = scramble(gameId, playId, df_pffScoutingData, selected_tracking_df, seuil = 0.5)
         event, te = compute_t_event(gameId, playId, selected_play_df, df_pffScoutingData, selected_tracking_df)
         Ae = selected_area_df[selected_area_df.frameId == te].Area.iloc[0]
-        Ac = np.max(selected_area_df.Area)
-        tc = selected_area_df[selected_area_df.Area == Ac].frameId.iloc[0]
+        t_extrema = argrelextrema(np.array(selected_area_df[selected_area_df.frameId < te].Area.values.tolist()), np.greater)[0]
+        if len(t_extrema) > 0 :
+            tc = t_extrema[-1] + 1
+            Ac = selected_area_df[selected_area_df.frameId == tc].Area.iloc[0]
+        else :
+            Ac = np.max(selected_area_df[selected_area_df.frameId <= te].Area)
+            tc = selected_area_df[selected_area_df.Area == Ac].frameId.iloc[0]
         one_play =  pd.DataFrame([[playId, gameId, event, te, Ae, tc, Ac]], 
                                 columns = ['playId', 'gameId', 'event', 'te', 'Ae', 'tc', 'Ac'])
         one_play.to_csv(f'data/area_features/plays/play{playId}_game{gameId}.csv')
