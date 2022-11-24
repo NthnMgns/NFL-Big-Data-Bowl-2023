@@ -44,60 +44,72 @@ class CharacteristicTime(Features):
     """Variable qui renvoie le temps critique de la séquence de jeu"""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['tc']
+        self.needed_data = "Area Data"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.index + ["tc"]].set_index(self.index)
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
 class CharacteristicArea(Features):
     """Variable qui renvoie la valeur de l'air au temps critique de la séquence de jeu"""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['Ac']
+        self.needed_data = "Area Data"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.index + ["Ac"]].set_index(self.index)
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
 class EventTime(Features):
     """Variable qui renvoie la valeur de t event"""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['te']
+        self.needed_data = "Area Data"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.index + ["te"]].set_index(self.index)
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
 class EventArea(Features):
     """Variable qui renvoie la valeur de l'aire à t event"""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['Ae']
+        self.needed_data = "Area Data"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.index + ["Ae"]].set_index(self.index)
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
 class PocketLifeTime(Features):
     """Variable qui renvoie le temps de vie de la poche"""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['lt']
+        self.needed_data = "Area Data"
 
     def transform(self):
         Acrit = 10
         df_copy = copy.copy(self) # Self est un objet Feature pas un dataframe ;) 
         df_copy["lt"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) +df_copy.te
-        df_transformed_data = df_copy[df_copy.index + ["lt"]].set_index(df_copy.index)
+        df_transformed_data = df_copy[df_copy.kept_columns].set_index(df_copy.index)
         return df_transformed_data
 
 class NbRusher(Features):
     """Variable qui renvoie le nombre de rusher"""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['nbRusher']
+        self.needed_data = "Scouting Data"
 
     def transform(self):
-        df_copy = copy.copy(self)
+        df_copy = copy.copy(self.df_dataraw)
         df_copy = df_copy.query("pff_role == 'Pass Rush'").groupby(by=df_copy.index).count()
         df_copy = df_copy.rename(columns={"pff_role": "nbRusher"})
-        df_transformed_data = df_copy[df_copy.index + ["nbRusher"]].set_index(df_copy.index)
+        df_transformed_data = df_copy[df_copy.kept_columns].set_index(df_copy.index)
         return df_transformed_data
 
     
@@ -105,35 +117,35 @@ class NbBlock(Features):
     """Variable qui renvoie le nombre de bloqueur"""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['nbBlock']
+        self.needed_data = "Scouting Data"
 
     def transform(self):
-        df_copy = copy.copy(self)
+        df_copy = copy.copy(self.df_dataraw)
         df_copy = df_copy.query("pff_role == 'Pass Block'").groupby(by=df_copy.index).count()
         df_copy = df_copy.rename(columns={"pff_role": "nbBlock"})
-        df_transformed_data = df_copy[df_copy.index + ["nbBlock"]].set_index(df_copy.index)
+        df_transformed_data = df_copy[df_copy.kept_columns].set_index(df_copy.index)
         return df_transformed_data
 
 class QBPosition(Features):
-    """
-    Variable qui renvoie si le QB est en shotgun ou non.
-    Nécessite les données de tracking et de scouting.
-    """
+    """Variable qui renvoie si le QB est en shotgun ou non."""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['qbPosition']
+        self.needed_data = "Processed data with qb_position function"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.index + ["qbPosition"]].set_index(self.index)
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
     
 class WeightDiffMatchup(Features):
-    """
-    Variable qui renvoie la différence de poids entre l'attaquant et le défenseur.
-    Nécessite les données sur les joueurs et de scouting.
-    """
+    """Variable qui renvoie la différence de poids entre l'attaquant et le défenseur."""
     def __init__(self):
         super().__init__()
+        self.kept_columns = self.index + ['weigth_diff']
+        self.needed_data = "Processed data with weight_diff function"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.index + ["weigth_diff"]].set_index(self.index)
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
     
