@@ -35,17 +35,18 @@ def features_one_play(playId) :
     selected_tracking_df = beaten_by_defender(gameId, playId , df_pffScoutingData, selected_tracking_df, seuil = 0.5)
     try :
         selected_tracking_df = scramble(gameId, playId, df_pffScoutingData, selected_tracking_df, seuil = 0.5)
-        event, te = compute_t_event(gameId, playId, selected_play_df, df_pffScoutingData, selected_tracking_df)
+        event, te, tsnap = compute_t_event(gameId, playId, selected_play_df, df_pffScoutingData, selected_tracking_df)
         Ae = selected_area_df[selected_area_df.frameId == te].Area.iloc[0]
+        te = te - tsnap
         t_extrema = argrelextrema(np.array(selected_area_df[selected_area_df.frameId < te].Area.values.tolist()), np.greater)[0]
         if len(t_extrema) > 0 :
-            tc = t_extrema[-1] + 1
+            tc = t_extrema[-1] + 1 - tsnap
             Ac = selected_area_df[selected_area_df.frameId == tc].Area.iloc[0]
         else :
             Ac = np.max(selected_area_df[selected_area_df.frameId <= te].Area)
-            tc = selected_area_df[selected_area_df.Area == Ac].frameId.iloc[0]
-        one_play =  pd.DataFrame([[playId, gameId, event, te, Ae, tc, Ac]], 
-                                columns = ['playId', 'gameId', 'event', 'te', 'Ae', 'tc', 'Ac'])
+            tc = selected_area_df[selected_area_df.Area == Ac].frameId.iloc[0] - tsnap
+        one_play =  pd.DataFrame([[playId, gameId, event, te, Ae, tc, Ac, tsnap]], 
+                                columns = ['playId', 'gameId', 'event', 'te', 'Ae', 'tc', 'Ac', 'tsnap'])
         one_play.to_csv(f'data/area_features/plays/play{playId}_game{gameId}.csv')
         return one_play
     except : 
