@@ -228,6 +228,12 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
     event = tracking_data.query(f"gameId == {gameId} & playId == {playId} & nflId == {qbId}").event.values.tolist()
     scramble_data = scramble(gameId, playId, scouting_data, tracking_data)
     frame_qb_run = scramble_data.query(f"nflId == {qbId}").scramble.values.tolist()
+    if "ball_snap" in event:
+        t_ball_snap = event.index("ball_snap")
+    elif "autoevent_ballsnap" in event:
+        t_ball_snap = event.index("autoevent_ballsnap")        
+    else:
+        t_ball_snap = 1
     if 1 in frame_qb_run:
         frame_qb_run = frame_qb_run.index(1) + 1
     else : 
@@ -262,7 +268,7 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
             t_event = np.max(scramble_data.frameId)
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = "scramble"
-    return [type_event,t_event]
+    return [type_event,t_event,t_ball_snap]
 
 # ------------------------------------------------- #
 #                 Machine Learning                  #
