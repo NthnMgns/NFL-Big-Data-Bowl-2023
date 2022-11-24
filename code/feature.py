@@ -50,7 +50,7 @@ class CharacteristicTime(Features):
         return df_transformed_data
 
 class CharacteristicArea(Features):
-    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    """Variable qui renvoie la valeur de l'air au temps critique de la séquence de jeu"""
     def __init__(self):
         super().__init__()
 
@@ -59,7 +59,7 @@ class CharacteristicArea(Features):
         return df_transformed_data
 
 class EventTime(Features):
-    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    """Variable qui renvoie la valeur de t event"""
     def __init__(self):
         super().__init__()
 
@@ -68,7 +68,7 @@ class EventTime(Features):
         return df_transformed_data
 
 class EventArea(Features):
-    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    """Variable qui renvoie la valeur de l'aire à t event"""
     def __init__(self):
         super().__init__()
 
@@ -77,7 +77,7 @@ class EventArea(Features):
         return df_transformed_data
 
 class PocketLifeTime(Features):
-    """Variable qui renvoie le temps critique de la séquence de jeu"""
+    """Variable qui renvoie le temps de vie de la poche"""
     def __init__(self):
         super().__init__()
 
@@ -88,4 +88,37 @@ class PocketLifeTime(Features):
         df_transformed_data = df_copy[df_copy.index + ["lt"]].set_index(df_copy.index)
         return df_transformed_data
 
+class nbRusher(Features):
+    """Variable qui renvoie le nombre de rusher"""
+    def __init__(self):
+        super().__init__()
 
+    def transform(self):
+        df_copy = copy.copy(self)
+        df_copy = df_copy.query("pff_role == 'Pass Rush'").groupby(by=df_copy.index).count()
+        df_copy = df_copy.rename(columns={"pff_role": "nbRusher"})
+        df_transformed_data = df_copy[df_copy.index + ["nbRusher"]].set_index(df_copy.index)
+        return df_transformed_data
+
+    
+class nbBlock(Features):
+    """Variable qui renvoie le nombre de bloqueur"""
+    def __init__(self):
+        super().__init__()
+
+    def transform(self):
+        df_copy = copy.copy(self)
+        df_copy = df_copy.query("pff_role == 'Pass Block'").groupby(by=df_copy.index).count()
+        df_copy = df_copy.rename(columns={"pff_role": "nbBlock"})
+        df_transformed_data = df_copy[df_copy.index + ["nbBlock"]].set_index(df_copy.index)
+        return df_transformed_data
+
+class QBPosition(Features):
+    """Variable qui renvoie si le QB est en shotgun ou non"""
+    def __init__(self):
+        super().__init__()
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.index + ["qbPosition"]].set_index(self.index)
+        return df_transformed_data
+    
