@@ -31,10 +31,10 @@ list_feature = [
     EventArea().read(df_area),
     PocketLifeTime().read(df_area),
     # CriticalTime().read(df_area),
-    nbRusher().read(df_scouting),
-    nbBlock().read(df_scouting)#,
+    NbRusher().read(df_scouting),
+    NbBlock().read(df_scouting)#,
     # QBPosition().read(data)
-    # weightDiffMatchup().read(data)
+    # WeightDiffMatchup().read(data)
 ]
 
 # ------------------------------------------------------ #

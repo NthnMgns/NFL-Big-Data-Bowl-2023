@@ -30,7 +30,7 @@ class Features():
         return new_feature
 
 class GeneralDescriptionPlay(Features):
-    """Variable qui indique reprend plusieurs descriptions de la séquence"""
+    """Variable qui reprend plusieurs descriptions de la séquence"""
     def __init__(self):
         super().__init__()
         self.kept_columns = self.index + ['down', 'yardsToGo', 'absoluteYardlineNumber', 'defendersInBox']
@@ -88,7 +88,7 @@ class PocketLifeTime(Features):
         df_transformed_data = df_copy[df_copy.index + ["lt"]].set_index(df_copy.index)
         return df_transformed_data
 
-class nbRusher(Features):
+class NbRusher(Features):
     """Variable qui renvoie le nombre de rusher"""
     def __init__(self):
         super().__init__()
@@ -101,7 +101,7 @@ class nbRusher(Features):
         return df_transformed_data
 
     
-class nbBlock(Features):
+class NbBlock(Features):
     """Variable qui renvoie le nombre de bloqueur"""
     def __init__(self):
         super().__init__()
@@ -125,7 +125,7 @@ class QBPosition(Features):
         df_transformed_data = self.df_dataraw[self.index + ["qbPosition"]].set_index(self.index)
         return df_transformed_data
     
-class weightDiffMatchup(Features):
+class WeightDiffMatchup(Features):
     """
     Variable qui renvoie la différence de poids entre l'attaquant et le défenseur.
     Nécessite les données sur les joueurs et de scouting.
