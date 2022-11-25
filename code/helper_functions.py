@@ -286,6 +286,7 @@ def weight_diff(players_data, scouting_data):
     scouting["index"] = scouting.groupby(["gameId","playId"],group_keys=False).cumcount()+1
     scouting = scouting.pivot(index=["gameId","playId"], columns="index", values="weight_diff").reset_index()
     scouting.columns = ["matchup" + str(i) if ix > 1 else i for ix, i in enumerate(scouting.columns)]
+    scouting = scouting.fillna(0)
     return scouting
 
 # ------------------------------------------------- #
