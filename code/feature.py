@@ -131,7 +131,7 @@ class QBPosition(Features):
     def __init__(self):
         super().__init__()
         self.kept_columns = self.index + ['qbPosition']
-        self.needed_data = "Merge players and tracking data"
+        self.needed_data = "Merged players and tracking data"
 
     def transform(self):
         df_copy = self.df_dataraw.copy()
@@ -149,7 +149,7 @@ class WeightDiffMatchup(Features):
     """Variable qui renvoie la différence de poids entre l'attaquant et le défenseur."""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['weigth_diff']
+        self.kept_columns = self.index + ['weight_diff']
         self.needed_data = "Processed data with weight_diff function"
 
     def transform(self):
