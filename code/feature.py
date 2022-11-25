@@ -131,10 +131,18 @@ class QBPosition(Features):
     def __init__(self):
         super().__init__()
         self.kept_columns = self.index + ['qbPosition']
-        self.needed_data = "Processed data with qb_position function"
+        self.needed_data = "Merge players and tracking data"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.query("frameId == 1")
+        qb = df_copy.loc[df_copy["officialPosition"]=="QB",["gameId","playId","x"]]
+        football = df_copy.loc[df_copy["team"]=="football",["gameId","playId","x"]]
+        data = pd.merge(qb,football,on=["gameId","playId"])
+        data = data.assign(diff = np.abs(data.x_x - data.x_y))
+        data = data.assign(qbPosition = 0)
+        data.loc[data["diff"] > seuil,"qbPosition"] = 1
+        df_transformed_data = data[self.kept_columns].set_index(self.index)       
         return df_transformed_data
     
 class WeightDiffMatchup(Features):

@@ -270,21 +270,6 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
         type_event = "scramble"
     return [type_event,t_event,t_ball_snap]
 
-def qb_position(player_data, tracking_data, seuil=2):
-    """
-    Ajoute une variable binaire à tracking_data indiquant si le QB est en shotgun (1) ou non (0).
-    """
-    data = pd.merge(tracking_data,player_data,how="left",on="nflId")
-    data = data.assign(qbPosition = np.nan)
-    data = data.query("frameId == 1 & (officialPosition == 'QB' | team == 'football')")
-    qb = data.loc[data["officialPosition"]=="QB",["gameId","playId","x"]]
-    football = data.loc[data["team"]=="football",["gameId","playId","x"]]
-    data = pd.merge(qb,football,on=["gameId","playId"])
-    data = data.assign(diff = np.abs(data.x_x - data.x_y))
-    data = data.assign(qbPosition = 0)
-    data.loc[data["diff"] > seuil,"qbPosition"] = 1
-    return data
-
 def weight_diff(gameId, playId, players_data, scouting_data):
     """
     Calcul la différence de poids entre l'attaquant et le défenseur.

@@ -15,7 +15,7 @@ df_area = pd.read_csv("data/area_features/Area_features.csv")
 df_scouting = pd.read_csv("data/pffScoutingData.csv")
 df_players = pd.read_csv("data/players.csv")
 df_tracking = pd.read_csv("data/week1.csv")
-df_qbPosition = qb_position(df_players,df_tracking)
+df_qbPosition = pd.merge(df_tracking,df_players,how="left",on="nflId")
 
 # TODO Simulation de données à supprimer
 df_area["t_c"] = [np.random.random() for i in range(len(df_area))]
