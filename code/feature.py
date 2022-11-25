@@ -51,6 +51,19 @@ class CharacteristicTime(Features):
         df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
+class CharacteristicSpeed(Features):
+    """Variable qui renvoie la vitesse de décroissance de l'aire de la poche de la séquence de jeu"""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ['Va']
+        self.needed_data = "Area Data"
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw.copy()
+        df_transformed_data.loc[:, 'Va'] = (self.df_dataraw.Ac - self.df_dataraw.Ae) / (self.df_dataraw.tc - self.df_dataraw.te)
+        df_transformed_data = df_transformed_data[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+
 class CharacteristicArea(Features):
     """Variable qui renvoie la valeur de l'air au temps critique de la séquence de jeu"""
     def __init__(self):
@@ -88,13 +101,16 @@ class PocketLifeTime(Features):
     """Variable qui renvoie le temps de vie de la poche"""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['lt']
+        self.kept_columns = self.index + ['PocketLife']
         self.needed_data = "Area Data"
 
     def transform(self):
         Acrit = 11.2
         df_copy = self.df_dataraw.copy() 
-        df_copy["lt"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) + df_copy.te
+        df_copy = df_copy[df_copy.pff_playAction == False]
+        df_copy["PocketLife"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) + df_copy.te
+        # A conserver ? 
+        df_copy = df_copy[(df_copy.PocketLife > 0.0)&(df_copy.PocketLife < 100.0)]
         df_transformed_data = df_copy[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
@@ -134,7 +150,8 @@ class QBPosition(Features):
         self.needed_data = "Processed data with qb_position function"
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
+        # Doublon par rapport à playId, gameId
+        df_transformed_data = self.df_dataraw[self.kept_columns].drop_duplicates(subset = self.index).set_index(self.index)
         return df_transformed_data
     
 class WeightDiffMatchup(Features):
