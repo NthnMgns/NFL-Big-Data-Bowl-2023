@@ -93,7 +93,7 @@ class PocketLifeTime(Features):
 
     def transform(self):
         Acrit = 10
-        df_copy = copy.copy(self) # Self est un objet Feature pas un dataframe ;) 
+        df_copy = copy.copy(self.df_dataraw) 
         df_copy["lt"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) +df_copy.te
         df_transformed_data = df_copy[df_copy.kept_columns].set_index(df_copy.index)
         return df_transformed_data
