@@ -274,15 +274,19 @@ def weight_diff(players_data, scouting_data):
     """
     Calcul la différence de poids entre l'attaquant et le défenseur.
     """
-    scouting_data = scouting_data.loc[:,["gameId","playId","nflId","pff_nflIdBlockedPlayer"]]
-    scouting_data = scouting_data[~scouting_data["pff_nflIdBlockedPlayer"].isnull()]
-    nflId = scouting_data.nflId.tolist()
-    nflId.extend(scouting_data.pff_nflIdBlockedPlayer.unique().tolist())
-    players_data = players_data.query(f"nflId in {nflId}").loc[:,["nflId","weight"]]
-    scouting_data = pd.merge(players_data,scouting_data,on="nflId").rename(columns={"weight": "weight_off"})
-    scouting_data = pd.merge(players_data.rename(columns={"nflId" : "pff_nflIdBlockedPlayer"}),scouting_data,on="pff_nflIdBlockedPlayer").rename(columns={"weight": "weight_def"})
-    scouting_data = scouting_data.assign(weight_diff = scouting_data.weight_off-scouting_data.weight_def)
-    return scouting_data
+    scouting = scouting_data.loc[:,["gameId","playId","nflId","pff_nflIdBlockedPlayer"]]
+    scouting = scouting[~scouting["pff_nflIdBlockedPlayer"].isnull()]
+    nflId = scouting.nflId.tolist()
+    nflId.extend(scouting.pff_nflIdBlockedPlayer.unique().tolist())
+    players = players_data.query(f"nflId in {nflId}").loc[:,["nflId","weight"]]
+    scouting = pd.merge(players,scouting,on="nflId").rename(columns={"weight": "weight_off"})
+    scouting = scouting.groupby(["gameId","playId","pff_nflIdBlockedPlayer"]).sum().reset_index()
+    scouting = pd.merge(players.rename(columns={"nflId" : "pff_nflIdBlockedPlayer"}),scouting,on="pff_nflIdBlockedPlayer").rename(columns={"weight": "weight_def"})
+    scouting = scouting.assign(weight_diff = scouting.weight_off-scouting.weight_def)
+    scouting["index"] = scouting.groupby(["gameId","playId"],group_keys=False).cumcount()+1
+    scouting = scouting.pivot(index=["gameId","playId"], columns="index", values="weight_diff").reset_index()
+    scouting.columns = ["matchup" + str(i) if ix > 1 else i for ix, i in enumerate(scouting.columns)]
+    return scouting
 
 # ------------------------------------------------- #
 #                 Machine Learning                  #
