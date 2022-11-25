@@ -92,10 +92,10 @@ class PocketLifeTime(Features):
         self.needed_data = "Area Data"
 
     def transform(self):
-        Acrit = 10
-        df_copy = copy.copy(self) # Self est un objet Feature pas un dataframe ;) 
-        df_copy["lt"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) +df_copy.te
-        df_transformed_data = df_copy[df_copy.kept_columns].set_index(df_copy.index)
+        Acrit = 11.2
+        df_copy = self.df_dataraw.copy() 
+        df_copy["lt"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) + df_copy.te
+        df_transformed_data = df_copy[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
 class NbRusher(Features):
@@ -106,13 +106,12 @@ class NbRusher(Features):
         self.needed_data = "Scouting Data"
 
     def transform(self):
-        df_copy = copy.copy(self.df_dataraw)
-        df_copy = df_copy.query("pff_role == 'Pass Rush'").groupby(by=df_copy.index).count()
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.query("pff_role == 'Pass Rush'").groupby(by=self.index).count().reset_index()
         df_copy = df_copy.rename(columns={"pff_role": "nbRusher"})
-        df_transformed_data = df_copy[df_copy.kept_columns].set_index(df_copy.index)
+        df_transformed_data = df_copy[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
-    
 class NbBlock(Features):
     """Variable qui renvoie le nombre de bloqueur"""
     def __init__(self):
@@ -121,10 +120,10 @@ class NbBlock(Features):
         self.needed_data = "Scouting Data"
 
     def transform(self):
-        df_copy = copy.copy(self.df_dataraw)
-        df_copy = df_copy.query("pff_role == 'Pass Block'").groupby(by=df_copy.index).count()
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.query("pff_role == 'Pass Block'").groupby(by=self.index).count().reset_index()
         df_copy = df_copy.rename(columns={"pff_role": "nbBlock"})
-        df_transformed_data = df_copy[df_copy.kept_columns].set_index(df_copy.index)
+        df_transformed_data = df_copy[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
 class QBPosition(Features):
