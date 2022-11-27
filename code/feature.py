@@ -147,18 +147,25 @@ class QBPosition(Features):
     def __init__(self):
         super().__init__()
         self.kept_columns = self.index + ['qbPosition']
-        self.needed_data = "Processed data with qb_position function"
+        self.needed_data = "Merged players and tracking data"
 
     def transform(self):
-        # Doublon par rapport à playId, gameId
-        df_transformed_data = self.df_dataraw[self.kept_columns].drop_duplicates(subset = self.index).set_index(self.index)
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.query("frameId == 1")
+        qb = df_copy.loc[df_copy["officialPosition"]=="QB",["gameId","playId","x"]]
+        football = df_copy.loc[df_copy["team"]=="football",["gameId","playId","x"]]
+        data = pd.merge(qb,football,on=["gameId","playId"])
+        data = data.assign(diff = np.abs(data.x_x - data.x_y))
+        data = data.assign(qbPosition = 0)
+        data.loc[data["diff"] > seuil,"qbPosition"] = 1
+        df_transformed_data = data[self.kept_columns].set_index(self.index)       
         return df_transformed_data
     
 class WeightDiffMatchup(Features):
     """Variable qui renvoie la différence de poids entre l'attaquant et le défenseur."""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['weigth_diff']
+        self.kept_columns = self.index + ['weight_diff']
         self.needed_data = "Processed data with weight_diff function"
 
     def transform(self):

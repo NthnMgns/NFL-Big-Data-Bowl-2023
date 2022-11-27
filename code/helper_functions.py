@@ -270,32 +270,17 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
         type_event = "scramble"
     return [type_event,t_event,t_ball_snap]
 
-def qb_position(player_data, tracking_data, seuil=2):
-    """
-    Ajoute une variable binaire à tracking_data indiquant si le QB est en shotgun (1) ou non (0).
-    """
-    data = pd.merge(tracking_data,player_data,how="left",on="nflId")
-    data = data.assign(qbPosition = np.nan)
-    data = data.query("frameId == 1 & (officialPosition == 'QB' | team == 'football')")
-    qb = data.loc[data["officialPosition"]=="QB",["gameId","playId","x"]]
-    football = data.loc[data["team"]=="football",["gameId","playId","x"]]
-    data = pd.merge(qb,football,on=["gameId","playId"])
-    data = data.assign(diff = np.abs(data.x_x - data.x_y))
-    data = data.assign(qbPosition = 0)
-    data.loc[data["diff"] > seuil,"qbPosition"] = 1
-    return data
-
-def weight_diff(gameId, playId, players_data, scouting_data):
+def weight_diff(players_data, scouting_data):
     """
     Calcul la différence de poids entre l'attaquant et le défenseur.
     """
-    scouting_data = scouting_data.query(f"gameId == {gameId} & playId == {playId}").loc[:,["nflId","pff_nflIdBlockedPlayer"]]
+    scouting_data = scouting_data.loc[:,["gameId","playId","nflId","pff_nflIdBlockedPlayer"]]
     scouting_data = scouting_data[~scouting_data["pff_nflIdBlockedPlayer"].isnull()]
     nflId = scouting_data.nflId.tolist()
     nflId.extend(scouting_data.pff_nflIdBlockedPlayer.unique().tolist())
     players_data = players_data.query(f"nflId in {nflId}").loc[:,["nflId","weight"]]
-    scouting_data = scouting_data.assign(weight_off = pd.merge(players_data,scouting_data.nflId,on="nflId").weight.values)
-    scouting_data = scouting_data.assign(weight_def = pd.merge(players_data.rename(columns={"nflId" : "pff_nflIdBlockedPlayer"}),scouting_data,on="pff_nflIdBlockedPlayer").weight.values)
+    scouting_data = pd.merge(players_data,scouting_data,on="nflId").rename(columns={"weight": "weight_off"})
+    scouting_data = pd.merge(players_data.rename(columns={"nflId" : "pff_nflIdBlockedPlayer"}),scouting_data,on="pff_nflIdBlockedPlayer").rename(columns={"weight": "weight_def"})
     scouting_data = scouting_data.assign(weight_diff = scouting_data.weight_off-scouting_data.weight_def)
     return scouting_data
 
