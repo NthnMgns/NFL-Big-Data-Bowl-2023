@@ -157,9 +157,9 @@ class QBPosition(Features):
         data = pd.merge(qb,football,on=["gameId","playId"])
         data = data.assign(diff = np.abs(data.x_x - data.x_y))
         data = data.assign(qbPosition = 0)
-        data.loc[data["diff"] > seuil,"qbPosition"] = 1
-        df_transformed_data = data[self.kept_columns].set_index(self.index)       
-        return df_transformed_data
+        data.loc[data["diff"] > 2,"qbPosition"] = 1
+        df_transformed_data = data[self.kept_columns].drop_duplicates(subset = ['playId', 'gameId'])     
+        return df_transformed_data.set_index(self.index)  
     
 class WeightDiffMatchup(Features):
     """Variable qui renvoie la différence de poids entre l'attaquant et le défenseur."""
