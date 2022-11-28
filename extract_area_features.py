@@ -26,7 +26,7 @@ df_pffScoutingData = pd.read_csv("data/pffScoutingData.csv")
 
 def features_one_play(playId) : 
     gameId = df_area[df_area.playId == playId].gameId.unique()[0]
-    #print(f'{playId} - {gameId}')
+    print(f'{playId} - {gameId}')
     selected_area_df = df_area[(df_area.playId==playId)&(df_area.gameId==gameId)].copy() 
     selected_play_df = df_play[(df_play.playId==playId)&(df_play.gameId==gameId)].copy()  
     tracking_players_df = pd.merge(df_tracking,df_players,how="left",on = "nflId")
@@ -36,19 +36,26 @@ def features_one_play(playId) :
     try :
         selected_tracking_df = scramble(gameId, playId, df_pffScoutingData, selected_tracking_df, seuil = 0.5)
         event, te, tsnap = compute_t_event(gameId, playId, selected_play_df, df_pffScoutingData, selected_tracking_df)
+        #print(tsnap,te)
         Ae = selected_area_df[selected_area_df.frameId == te].Area.iloc[0]
-        te = te - tsnap
-        t_extrema = argrelextrema(np.array(selected_area_df[selected_area_df.frameId < te].Area.values.tolist()), np.greater)[0]
+        #print(np.array(selected_area_df[(selected_area_df.frameId > tsnap)&(selected_area_df.frameId < te)].Area.values.tolist()))
+        t_extrema = argrelextrema(np.array(selected_area_df[(selected_area_df.frameId > tsnap)&(selected_area_df.frameId< te)].Area.values.tolist()), np.greater)[0]
+        #print(t_extrema)
         if len(t_extrema) > 0 :
-            tc = t_extrema[-1] + 1 - tsnap
-            Ac = selected_area_df[selected_area_df.frameId == tc].Area.iloc[0]
+            #print('local maxima found')
+            tc = t_extrema[-1] + 1 
+            #print(tc)
+            Ac = selected_area_df[selected_area_df.frameId == tc + tsnap].Area.iloc[0]
+            #print(Ac)
         else :
-            Ac = np.max(selected_area_df[selected_area_df.frameId <= te].Area)
+            #print('global max found')
+            Ac = np.max(selected_area_df[(selected_area_df.frameId > tsnap) & (selected_area_df.frameId < te)].Area)
             tc = selected_area_df[selected_area_df.Area == Ac].frameId.iloc[0] - tsnap
+        te = te - tsnap
         one_play =  pd.DataFrame([[playId, gameId, event, te, Ae, tc, Ac, tsnap]], 
                                 columns = ['playId', 'gameId', 'event', 'te', 'Ae', 'tc', 'Ac', 'tsnap'])
-        #one_play.to_csv(f'data/area_features/plays/play{playId}_game{gameId}.csv')
-        #return one_play
+        one_play.to_csv(f'data/area_features/plays/play{playId}_game{gameId}.csv')
+        return one_play
     except : 
             print('Problème pour gameId, playId : ' + str((gameId, playId)))
     #play_list.append(playId)
