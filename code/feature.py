@@ -165,7 +165,7 @@ class WeightDiffMatchup(Features):
     """Variable qui renvoie la différence de poids entre l'attaquant et le défenseur."""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['weight_diff']
+        self.kept_columns = self.index + ["matchup" + str(i) for i in np.arange(1,8)]
         self.needed_data = "Processed data with weight_diff function"
 
     def transform(self):
