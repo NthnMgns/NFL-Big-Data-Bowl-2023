@@ -289,20 +289,3 @@ def weight_diff(players_data, scouting_data):
     scouting = scouting.fillna(0)
     return scouting
 
-# ------------------------------------------------- #
-#                 Machine Learning                  #
-# ------------------------------------------------- #
-
-def etl(gameIds, list_feature):
-    """Sélectionne et transforme les données pour former un dataframe unique"""
-    df_features = list()
-    for feature in list_feature :
-        feature_set = feature.split(gameIds)
-        df_features.append(feature_set.transform())
-       # print(feature_set.transform().head())
-    df_features = pd.concat(df_features, axis = 1)
-    # Drop no data lt
-    df_features = df_features.dropna(subset=['PocketLife'])
-    # Fill NA with 0
-    df_features = df_features.fillna(0)
-    return df_features

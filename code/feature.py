@@ -13,6 +13,7 @@ class Features():
         self.df_dataraw = pd.DataFrame()
         self.index = ['gameId', 'playId']
         self.needed_data = 'Description of needed data'
+        self.is_strata = False
 
     def read(self, df_data):
         """Lecture des données csv pour les convertir en dataframe. Alimente l'attribut df_dataraw"""
@@ -33,7 +34,7 @@ class GeneralDescriptionPlay(Features):
     """Variable qui reprend plusieurs descriptions de la séquence"""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['down', 'yardsToGo', 'absoluteYardlineNumber', 'defendersInBox']
+        self.kept_columns = self.index + ['yardsToGo']
         self.needed_data = "Play Data"
 
     def transform(self):
@@ -70,10 +71,12 @@ class CharacteristicArea(Features):
         super().__init__()
         self.kept_columns = self.index + ['Ac']
         self.needed_data = "Area Data"
+        #self.is_strata = ['Ac_strata']
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
-        return df_transformed_data
+        df_transformed_data = self.df_dataraw.copy()
+        df_transformed_data.loc[:, 'Ac_strata'] = pd.cut(df_transformed_data['Ac'], np.arange(0, 200, 10))
+        return df_transformed_data[self.kept_columns].set_index(self.index)
 
 class EventTime(Features):
     """Variable qui renvoie la valeur de t event"""
@@ -172,3 +175,42 @@ class WeightDiffMatchup(Features):
         df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
     
+class SurvivalData(Features):
+    """Variable nécessaire à entrainer un model de survie : n_Durée et b_IsMort"""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["duration", "death"]
+        self.needed_data = "Merge Area_feature with play"
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw.copy()
+        # Enlève les playAction
+        df_transformed_data = df_transformed_data[df_transformed_data.pff_playAction == 0]
+        # Calcule la durée de vie de l'action 
+        df_transformed_data.loc[:, 'duration'] = (df_transformed_data.te - df_transformed_data.tsnap)
+        df_transformed_data = df_transformed_data[df_transformed_data.duration > 0]
+        # La poche a survécu ? 
+        df_transformed_data.loc[:, 'death'] = df_transformed_data.event.apply(lambda x : 0 if x == 'pass' else 1)
+        return df_transformed_data[self.kept_columns].set_index(self.index)
+
+
+# ------------------------------------------------- #
+#                 Machine Learning                  #
+# ------------------------------------------------- #
+
+def etl(gameIds, list_feature):
+    """Sélectionne et transforme les données pour former un dataframe unique"""
+    df_features = list()
+    strata_list = list()
+    for feature in list_feature :
+        feature_set = feature.split(gameIds)
+        df_features.append(feature_set.transform())
+        if feature.is_strata :
+            strata_list += feature.is_strata
+        #print(feature_set.transform().head())
+    df_features = pd.concat(df_features, axis = 1)
+    # Drop no data lt
+    df_features = df_features.dropna(subset=['death', 'duration'])
+    # Fill NA with 0
+    df_features = df_features.fillna(0)
+    return df_features, strata_list
