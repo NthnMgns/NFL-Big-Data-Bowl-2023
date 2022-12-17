@@ -154,12 +154,14 @@ class QBPosition(Features):
 
     def transform(self):
         df_copy = self.df_dataraw.copy()
+        # Récupère la position du QB et de la balle sur la 1ère frame
         df_copy = df_copy.query("frameId == 1")
         qb = df_copy.loc[df_copy["officialPosition"]=="QB",["gameId","playId","x"]]
         football = df_copy.loc[df_copy["team"]=="football",["gameId","playId","x"]]
         data = pd.merge(qb,football,on=["gameId","playId"])
         data = data.assign(diff = np.abs(data.x_x - data.x_y))
         data = data.assign(qbPosition = 0)
+        # Si le QB est à plus de 2y de la balle, on le considère en shotgun
         data.loc[data["diff"] > 2,"qbPosition"] = 1
         df_transformed_data = data[self.kept_columns].drop_duplicates(subset = ['playId', 'gameId'])     
         return df_transformed_data.set_index(self.index)  
@@ -170,6 +172,17 @@ class WeightDiffMatchup(Features):
         super().__init__()
         self.kept_columns = self.index + ["matchup" + str(i) for i in np.arange(1,8)]
         self.needed_data = "Processed data with weight_diff function"
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+    
+class WeightDiffPack(Features):
+    """Variable qui renvoie la différence de poids entre les bloqueurs et les rushers."""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["weightDiffPack"]
+        self.needed_data = "Processed data with weight_diff_pack function"
 
     def transform(self):
         df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
