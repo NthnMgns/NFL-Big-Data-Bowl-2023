@@ -72,10 +72,10 @@ print(df_train.head())
 model = CoxPHFitter() #WeibullAFTFitter #CoxPHFitter
 model.fit(df_train, duration_col='duration', event_col='death', show_progress = True)
 
-#model.check_assumptions(df_train)
+model.check_assumptions(df_train)
 
-#print("Résumé")
-#print(model.summary)
+print("Résumé")
+print(model.summary)
 
 # Test
 print("Score (concordance) :")

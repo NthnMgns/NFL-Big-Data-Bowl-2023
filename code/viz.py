@@ -3,6 +3,8 @@ from shapely.geometry import Polygon
 import pandas as pd 
 import numpy as np 
 from helper_functions import *
+from PIL import Image
+
 
 # ------------------------------------------------------ #
 #                   Variables fixes                      #
@@ -320,3 +322,103 @@ def display_1_frame(frameId, line_of_scrimmage = None, first_down_marker = None,
         "method": "animate"}
 
     return data, slider_step
+
+# ------------------------------------------------------ #
+#               Fonctions graphiques                     #
+# ------------------------------------------------------ #
+
+def fig_bar_plot_team(df, metric, linemen, y_legend = "Legend", ascending_metric = False, imagette_size = 2):
+    """Trace le bar plot des équipes selon une métrique et la ligne analysée"""
+    team_ranking = df.sort_values(by = metric)
+    fig = go.Figure(
+        go.Bar(
+            x = team_ranking[metric].rank(method = 'first', ascending = ascending_metric if linemen == 'possessionTeam' else not ascending_metric),
+            y = team_ranking[metric],
+            marker_color = [colors_teams[team] for team in team_ranking[linemen]],
+            text = team_ranking[linemen],
+            textfont = dict(size = 10, color = 'white')
+        )
+    )
+    fig.update_layout(
+                barmode='group',
+                template="plotly_white",
+    )
+    fig.update_yaxes(
+        title= dict(
+            text = y_legend,
+        ),
+        range=[min(0, team_ranking[metric].min()), team_ranking[metric].max() * 1.2],
+    )
+    fig.update_xaxes(
+        title= dict(
+            text ="Team rank",
+        ),
+        tick0 = 1,
+        dtick = 1,
+    )
+
+    for n, team in enumerate(team_ranking[linemen].values): 
+        fig.add_layout_image(
+                dict(
+                    source=Image.open(f"data/logos-nfl/{team}.png"),
+                    xref="x",
+                    yref="y",
+                    x = team_ranking[metric].rank(method = 'first', ascending = ascending_metric if linemen == 'possessionTeam' else not ascending_metric).iloc[n],
+                    y = team_ranking[metric].iloc[n] * 1.05,
+                    sizex= imagette_size,
+                    sizey = imagette_size,
+                    xanchor="center",
+                    yanchor="bottom"
+                    )
+        )
+    return fig
+
+def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_legend = "Legend", imagette_size = 2):
+    """Trace le plot des équipes selon deux métriques et la ligne analysée"""
+    fig = go.Figure(
+        go.Scatter(
+            x = df[metric_x],
+            y = df[metric_y],
+            mode='markers',
+            marker_color = [colors_teams[team] for team in df[linemen]],
+            text = df[linemen],
+            opacity = 0,
+            hovertemplate = "%{text}: <br>" + metric_x + ": %{x} <br>" + metric_y + ": %{y}"
+        )
+    )
+    fig.update_layout(
+                barmode='group',
+                template="plotly_white",
+    )
+    fig.update_yaxes(
+        title= dict(
+            text = metric_y,
+        ),
+        #range=[min(0, df[metric].min()), df[metric].max() * 1.2],
+    )
+    fig.update_xaxes(
+        title= dict(
+            text = metric_x,
+        ),
+        tick0 = 1,
+        dtick = 1,
+    )
+
+    for n, team in enumerate(df[linemen].values): 
+        fig.add_layout_image(
+                dict(
+                    source=Image.open(f"data/logos-nfl/{team}.png"),
+                    xref="x",
+                    yref="y",
+                    x = df[metric_x].iloc[n],
+                    y = df[metric_y].iloc[n],
+                    sizex= imagette_size,
+                    sizey= imagette_size,
+                    xanchor="center",
+                    yanchor="middle",
+                    opacity = 0.8
+                    #sizing="stretch",
+                    #layer="below"
+                    )
+        )
+    return fig
