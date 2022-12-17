@@ -22,6 +22,7 @@ df_players = pd.read_csv("data/players.csv")
 df_tracking = pd.read_csv("data/week1.csv")
 df_qbPosition = pd.merge(df_tracking,df_players,how="left",on="nflId")
 df_weight = weight_diff(df_players,df_scouting)
+df_weight_pack = weight_diff_pack(df_players,df_scouting)
 
 df_area_features = pd.read_csv(f"data/area_features/Area_features.csv").drop(columns=['Unnamed: 0'])
 df_detail_plays = pd.merge(df_area_features,df_play,how="left",on = ["playId","gameId"])
@@ -46,6 +47,8 @@ list_feature = [
     NbBlock().read(df_scouting),
     QBPosition().read(df_qbPosition),
     #WeightDiffMatchup().read(df_weight),
+    WeightDiffPack().read(df_weight_pack),
+    Outnumber().read(df_scouting),
     SurvivalData().read(df_detail_plays)
 ]
 

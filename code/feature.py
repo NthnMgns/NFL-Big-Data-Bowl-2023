@@ -154,12 +154,14 @@ class QBPosition(Features):
 
     def transform(self):
         df_copy = self.df_dataraw.copy()
+        # Récupère la position du QB et de la balle sur la 1ère frame
         df_copy = df_copy.query("frameId == 1")
         qb = df_copy.loc[df_copy["officialPosition"]=="QB",["gameId","playId","x"]]
         football = df_copy.loc[df_copy["team"]=="football",["gameId","playId","x"]]
         data = pd.merge(qb,football,on=["gameId","playId"])
         data = data.assign(diff = np.abs(data.x_x - data.x_y))
         data = data.assign(qbPosition = 0)
+        # Si le QB est à plus de 2y de la balle, on le considère en shotgun
         data.loc[data["diff"] > 2,"qbPosition"] = 1
         df_transformed_data = data[self.kept_columns].drop_duplicates(subset = ['playId', 'gameId'])     
         return df_transformed_data.set_index(self.index)  
@@ -173,6 +175,38 @@ class WeightDiffMatchup(Features):
 
     def transform(self):
         df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+    
+class WeightDiffPack(Features):
+    """Variable qui renvoie la différence de poids entre les bloqueurs et les rushers."""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["weightDiffPack"]
+        self.needed_data = "Processed data with weight_diff_pack function"
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+    
+class Outnumber(Features):
+    """Variable qui renvoie le nombre de surnombre en faveur des bloqueurs."""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["outnumber_O"]
+        self.needed_data = "Scouting data"
+
+    def transform(self):
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.loc[:,self.index + ["nflId","pff_role","pff_nflIdBlockedPlayer"]]
+        # Calcul du nombre de surnombres pour les bloqueurs
+        offense = df_copy.query("pff_role == 'Pass Block'").drop(columns = ["pff_role"])
+        offense = offense.groupby(self.index + ["pff_nflIdBlockedPlayer"]).count()
+        offense.loc[offense["nflId"] == 1, "nflId"] = 0
+        offense.loc[offense["nflId"] > 1, "nflId"] = 1
+        offense = offense.groupby(["gameId","playId"]).sum()
+        offense = offense.rename(columns={"nflId" : "outnumber_O"}).reset_index()
+
+        df_transformed_data = offense[self.kept_columns].set_index(self.index)
         return df_transformed_data
     
 class SurvivalData(Features):
@@ -214,3 +248,4 @@ def etl(gameIds, list_feature):
     # Fill NA with 0
     df_features = df_features.fillna(0)
     return df_features, strata_list
+

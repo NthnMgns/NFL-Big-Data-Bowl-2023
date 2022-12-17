@@ -289,3 +289,19 @@ def weight_diff(players_data, scouting_data):
     scouting = scouting.fillna(0)
     return scouting
 
+def weight_diff_pack(players_data, scouting_data):
+    """
+    Calcul la différence de poids entre les bloqueurs et les rushers.
+    """
+    players = players_data.loc[:,["nflId","weight"]]
+    scouting = scouting_data.loc[:,["gameId","playId","nflId","pff_role"]]
+    offense = scouting.query("pff_role == 'Pass Block'")
+    offense = pd.merge(offense,players,how="left",on="nflId").drop(columns = "nflId")
+    offense2 = offense.groupby(["gameId","playId"]).sum()
+    defense = scouting.query("pff_role == 'Pass Rush'")
+    defense = pd.merge(defense,players,how="left",on="nflId").drop(columns = "nflId")
+    defense2 = defense.groupby(["gameId","playId"]).sum()
+    df = pd.merge(offense2,defense2,on=["gameId","playId"])
+    df["weightDiffPack"] = df.weight_x - df.weight_y
+    df = df.rename(columns={"weight_x" : "weight_o", "weight_y" : "weight_d"}).reset_index()
+    return df
