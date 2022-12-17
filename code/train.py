@@ -48,6 +48,7 @@ list_feature = [
     QBPosition().read(df_qbPosition),
     #WeightDiffMatchup().read(df_weight),
     WeightDiffPack().read(df_weight_pack),
+    Outnumber().read(df_scouting),
     SurvivalData().read(df_detail_plays)
 ]
 

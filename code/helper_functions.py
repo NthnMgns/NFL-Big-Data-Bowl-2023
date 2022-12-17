@@ -303,5 +303,5 @@ def weight_diff_pack(players_data, scouting_data):
     defense2 = defense.groupby(["gameId","playId"]).sum()
     df = pd.merge(offense2,defense2,on=["gameId","playId"])
     df["weightDiffPack"] = df.weight_x - df.weight_y
-    df = df.rename(columns={"weight_x" : "weight_o", "weight_y" : "weight_d"})
+    df = df.rename(columns={"weight_x" : "weight_o", "weight_y" : "weight_d"}).reset_index()
     return df
