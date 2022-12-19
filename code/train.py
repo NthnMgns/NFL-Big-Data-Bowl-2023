@@ -49,6 +49,7 @@ list_feature = [
     #WeightDiffMatchup().read(df_weight),
     WeightDiffPack().read(df_weight_pack),
     Outnumber().read(df_scouting),
+    UnblockedPlayer().read(df_scouting),
     SurvivalData().read(df_detail_plays)
 ]
 
