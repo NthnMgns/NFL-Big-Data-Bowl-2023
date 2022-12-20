@@ -1,4 +1,5 @@
-import pandas as pd 
+import pandas as pd
+import numpy as np
 from helper_functions import *
 import copy
 
@@ -13,6 +14,7 @@ class Features():
         self.df_dataraw = pd.DataFrame()
         self.index = ['gameId', 'playId']
         self.needed_data = 'Description of needed data'
+        self.is_strata = False
 
     def read(self, df_data):
         """Lecture des données csv pour les convertir en dataframe. Alimente l'attribut df_dataraw"""
@@ -33,7 +35,7 @@ class GeneralDescriptionPlay(Features):
     """Variable qui reprend plusieurs descriptions de la séquence"""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['down', 'yardsToGo', 'absoluteYardlineNumber', 'defendersInBox']
+        self.kept_columns = self.index + ['yardsToGo']
         self.needed_data = "Play Data"
 
     def transform(self):
@@ -51,16 +53,31 @@ class CharacteristicTime(Features):
         df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
+class CharacteristicSpeed(Features):
+    """Variable qui renvoie la vitesse de décroissance de l'aire de la poche de la séquence de jeu"""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ['Va']
+        self.needed_data = "Area Data"
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw.copy()
+        df_transformed_data.loc[:, 'Va'] = (self.df_dataraw.Ac - self.df_dataraw.Ae) / (self.df_dataraw.tc - self.df_dataraw.te)
+        df_transformed_data = df_transformed_data[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+
 class CharacteristicArea(Features):
     """Variable qui renvoie la valeur de l'air au temps critique de la séquence de jeu"""
     def __init__(self):
         super().__init__()
         self.kept_columns = self.index + ['Ac']
         self.needed_data = "Area Data"
+        #self.is_strata = ['Ac_strata']
 
     def transform(self):
-        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
-        return df_transformed_data
+        df_transformed_data = self.df_dataraw.copy()
+        df_transformed_data.loc[:, 'Ac_strata'] = pd.cut(df_transformed_data['Ac'], np.arange(0, 200, 10))
+        return df_transformed_data[self.kept_columns].set_index(self.index)
 
 class EventTime(Features):
     """Variable qui renvoie la valeur de t event"""
@@ -88,13 +105,16 @@ class PocketLifeTime(Features):
     """Variable qui renvoie le temps de vie de la poche"""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['lt']
+        self.kept_columns = self.index + ['PocketLife']
         self.needed_data = "Area Data"
 
     def transform(self):
         Acrit = 11.2
         df_copy = self.df_dataraw.copy() 
-        df_copy["lt"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) + df_copy.te
+        df_copy = df_copy[df_copy.pff_playAction == False]
+        df_copy["PocketLife"] = (Acrit - df_copy.Ae)/(df_copy.Ac - df_copy.Ae) * (df_copy.tc - df_copy.te) + df_copy.te
+        # A conserver ? 
+        df_copy = df_copy[(df_copy.PocketLife > 0.0)&(df_copy.PocketLife < 100.0)]
         df_transformed_data = df_copy[self.kept_columns].set_index(self.index)
         return df_transformed_data
 
@@ -135,15 +155,17 @@ class QBPosition(Features):
 
     def transform(self):
         df_copy = self.df_dataraw.copy()
+        # Récupère la position du QB et de la balle sur la 1ère frame
         df_copy = df_copy.query("frameId == 1")
         qb = df_copy.loc[df_copy["officialPosition"]=="QB",["gameId","playId","x"]]
         football = df_copy.loc[df_copy["team"]=="football",["gameId","playId","x"]]
         data = pd.merge(qb,football,on=["gameId","playId"])
         data = data.assign(diff = np.abs(data.x_x - data.x_y))
         data = data.assign(qbPosition = 0)
-        data.loc[data["diff"] > seuil,"qbPosition"] = 1
-        df_transformed_data = data[self.kept_columns].set_index(self.index)       
-        return df_transformed_data
+        # Si le QB est à plus de 2y de la balle, on le considère en shotgun
+        data.loc[data["diff"] > 2,"qbPosition"] = 1
+        df_transformed_data = data[self.kept_columns].drop_duplicates(subset = ['playId', 'gameId'])     
+        return df_transformed_data.set_index(self.index)  
     
 class WeightDiffMatchup(Features):
     """Variable qui renvoie la différence de poids entre l'attaquant et le défenseur."""
@@ -156,3 +178,101 @@ class WeightDiffMatchup(Features):
         df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
         return df_transformed_data
     
+class WeightDiffPack(Features):
+    """Variable qui renvoie la différence de poids entre les bloqueurs et les rushers."""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["weightDiffPack"]
+        self.needed_data = "Processed data with weight_diff_pack function"
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+    
+class Outnumber(Features):
+    """Variable qui renvoie le nombre de surnombre en faveur des bloqueurs."""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["outnumber_O"]
+        self.needed_data = "Scouting data"
+
+    def transform(self):
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.loc[:,self.index + ["nflId","pff_role","pff_nflIdBlockedPlayer"]]
+        # Calcul du nombre de surnombres pour les bloqueurs
+        offense = df_copy.query("pff_role == 'Pass Block'").drop(columns = ["pff_role"])
+        offense = offense.groupby(self.index + ["pff_nflIdBlockedPlayer"]).count()
+        offense.loc[offense["nflId"] == 1, "nflId"] = 0
+        offense.loc[offense["nflId"] > 1, "nflId"] = 1
+        offense = offense.groupby(["gameId","playId"]).sum()
+        offense = offense.rename(columns={"nflId" : "outnumber_O"}).reset_index()
+
+        df_transformed_data = offense[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+        
+class UnblockedPlayer(Features):
+    """Variable qui renvoie le nombre de rushers non bloqués"""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["unblockedRusher"]
+        self.needed_data = "Scouting data"
+
+    def transform(self):
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.loc[:,self.index + ["nflId","pff_role","pff_nflIdBlockedPlayer"]]
+        
+        # Calcul du nombre de joueurs bloqués
+        offense = df_copy.query("pff_role == 'Pass Block'").drop(columns = ["pff_role"])
+        offense = offense.groupby(self.index + ["pff_nflIdBlockedPlayer"]).count()
+        offense = offense.groupby(self.index).count()
+        offense = offense.rename(columns={"nflId" : "n_block"}).reset_index()
+        # Calcul du nombre de rusher
+        defense = df_copy.query("pff_role == 'Pass Rush'")
+        defense = defense.groupby(self.index).count().drop(columns = ["pff_role","pff_nflIdBlockedPlayer"])
+        defense = defense.rename(columns={"nflId" : "n_rush"}).reset_index()
+
+        df = pd.merge(offense,defense,on=["gameId","playId"])
+        df["unblockedRusher"] = df.n_rush - df.n_block
+        df_transformed_data = df[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+    
+class SurvivalData(Features):
+    """Variable nécessaire à entrainer un model de survie : n_Durée et b_IsMort"""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["duration", "death"]
+        self.needed_data = "Merge Area_feature with play"
+
+    def transform(self):
+        df_transformed_data = self.df_dataraw.copy()
+        # Enlève les playAction
+        df_transformed_data = df_transformed_data[df_transformed_data.pff_playAction == 0]
+        # Calcule la durée de vie de l'action 
+        df_transformed_data.loc[:, 'duration'] = (df_transformed_data.te - df_transformed_data.tsnap)
+        df_transformed_data = df_transformed_data[df_transformed_data.duration > 0]
+        # La poche a survécu ? 
+        df_transformed_data.loc[:, 'death'] = df_transformed_data.event.apply(lambda x : 0 if x == 'pass' else 1)
+        return df_transformed_data[self.kept_columns].set_index(self.index)
+
+
+# ------------------------------------------------- #
+#                 Machine Learning                  #
+# ------------------------------------------------- #
+
+def etl(gameIds, list_feature):
+    """Sélectionne et transforme les données pour former un dataframe unique"""
+    df_features = list()
+    strata_list = list()
+    for feature in list_feature :
+        feature_set = feature.split(gameIds)
+        df_features.append(feature_set.transform())
+        if feature.is_strata :
+            strata_list += feature.is_strata
+        #print(feature_set.transform().head())
+    df_features = pd.concat(df_features, axis = 1)
+    # Drop no data lt
+    df_features = df_features.dropna(subset=['death', 'duration'])
+    # Fill NA with 0
+    df_features = df_features.fillna(0)
+    return df_features, strata_list
+

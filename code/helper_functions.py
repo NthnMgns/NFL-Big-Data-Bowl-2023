@@ -292,17 +292,19 @@ def weight_diff(players_data, scouting_data):
     scouting = scouting.fillna(0)
     return scouting
 
-# ------------------------------------------------- #
-#                 Machine Learning                  #
-# ------------------------------------------------- #
-
-def etl(gameIds, list_feature):
-    """Sélectionne et transforme les données pour former un dataframe unique"""
-    df_features = list()
-    for feature in list_feature :
-        feature_set = feature.split(gameIds)
-        df_features.append(feature_set.transform())
-    df_features = pd.concat(df_features, axis = 1)
-    # Fill NA with 0
-    df_features = df_features.fillna(0)
-    return df_features
+def weight_diff_pack(players_data, scouting_data):
+    """
+    Calcul la différence de poids entre les bloqueurs et les rushers.
+    """
+    players = players_data.loc[:,["nflId","weight"]]
+    scouting = scouting_data.loc[:,["gameId","playId","nflId","pff_role"]]
+    offense = scouting.query("pff_role == 'Pass Block'")
+    offense = pd.merge(offense,players,how="left",on="nflId").drop(columns = "nflId")
+    offense2 = offense.groupby(["gameId","playId"]).sum()
+    defense = scouting.query("pff_role == 'Pass Rush'")
+    defense = pd.merge(defense,players,how="left",on="nflId").drop(columns = "nflId")
+    defense2 = defense.groupby(["gameId","playId"]).sum()
+    df = pd.merge(offense2,defense2,on=["gameId","playId"])
+    df["weightDiffPack"] = df.weight_x - df.weight_y
+    df = df.rename(columns={"weight_x" : "weight_o", "weight_y" : "weight_d"}).reset_index()
+    return df
