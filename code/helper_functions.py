@@ -228,6 +228,7 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
     event = tracking_data.query(f"gameId == {gameId} & playId == {playId} & nflId == {qbId}").event.values.tolist()
     scramble_data = scramble(gameId, playId, scouting_data, tracking_data)
     frame_qb_run = scramble_data.query(f"nflId == {qbId}").scramble.values.tolist()
+    isHurry = 1 in scouting_data.query(f"gameId == {gameId} & playId == {playId}").pff_hurry.values.tolist()
     if "ball_snap" in event:
         t_ball_snap = event.index("ball_snap")
     elif "autoevent_ballsnap" in event:
@@ -248,6 +249,8 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
             t_event = np.max(scramble_data.frameId)
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = ["scramble","pass"][np.argmin([frame_qb_run,t_event])]
+        if isHurry and type_event == "pass":
+            type_event = "hurry"
             
     elif playresult == "S":
         if "qb_sack" in event:
