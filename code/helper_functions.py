@@ -308,3 +308,17 @@ def weight_diff_pack(players_data, scouting_data):
     df["weightDiffPack"] = df.weight_x - df.weight_y
     df = df.rename(columns={"weight_x" : "weight_o", "weight_y" : "weight_d"}).reset_index()
     return df
+
+def data_by_week(data, week_data):
+    """Permet de filtrer les données (scouting_data ou plays_data) par week."""
+    ID = week_data.loc[:,["gameId","playId"]].groupby(["gameId","playId"]).count().reset_index()
+    df = data.copy()  
+    df = df[df.set_index(["gameId","playId"]).index.isin(ID.set_index(["gameId","playId"]).index)]
+    return df
+
+def get_stat(scouting_data, play_data, linemen):
+    """Calcule le nombre de hit, hurry et de sack."""
+    df = pd.merge(scouting_data,play_data,how="left",on = ["gameId","playId"])
+    df = df.groupby(["gameId","playId",linemen]).sum().reset_index().loc[:,[linemen,"pff_hit","pff_hurry","pff_sack"]]
+    df = df.groupby(linemen).sum().reset_index().rename(columns={"pff_hit" : "n_hit","pff_hurry" : "n_hurry","pff_sack" : "n_sack"})
+    return df
