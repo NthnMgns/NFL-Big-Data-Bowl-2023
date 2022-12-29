@@ -309,11 +309,11 @@ def weight_diff_pack(players_data, scouting_data):
     df = df.rename(columns={"weight_x" : "weight_o", "weight_y" : "weight_d"}).reset_index()
     return df
 
-def data_by_week(data, week_data):
-    """Permet de filtrer les données (scouting_data ou plays_data) par week."""
-    ID = week_data.loc[:,["gameId","playId"]].groupby(["gameId","playId"]).count().reset_index()
+def data_by_week(data, df_games, week):
+    """Permet de filtrer data par week."""
+    ID = df_games.query(f"week in {week}").gameId.values
     df = data.copy()  
-    df = df[df.set_index(["gameId","playId"]).index.isin(ID.set_index(["gameId","playId"]).index)]
+    df = df[df.gameId.isin(ID)]
     return df
 
 def get_stat(scouting_data, play_data, linemen):
