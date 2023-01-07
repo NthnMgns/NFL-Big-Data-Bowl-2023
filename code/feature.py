@@ -35,7 +35,7 @@ class GeneralDescriptionPlay(Features):
     """Variable qui reprend plusieurs descriptions de la séquence"""
     def __init__(self):
         super().__init__()
-        self.kept_columns = self.index + ['yardsToGo']
+        self.kept_columns = self.index + ['yardsToGo', 'absoluteYardlineNumber', 'down']
         self.needed_data = "Play Data"
 
     def transform(self):
@@ -248,10 +248,10 @@ class SurvivalData(Features):
         # Enlève les playAction
         df_transformed_data = df_transformed_data[df_transformed_data.pff_playAction == 0]
         # Calcule la durée de vie de l'action 
-        df_transformed_data.loc[:, 'duration'] = (df_transformed_data.te - df_transformed_data.tsnap)
-        df_transformed_data = df_transformed_data[df_transformed_data.duration > 0]
+        df_transformed_data.loc[:, 'duration'] = df_transformed_data.te #(df_transformed_data.te - df_transformed_data.tsnap)
+        #df_transformed_data = df_transformed_data[df_transformed_data.duration > 0]
         # La poche a survécu ? 
-        df_transformed_data.loc[:, 'death'] = df_transformed_data.event.apply(lambda x : 0 if x == 'pass' else 1)
+        df_transformed_data.loc[:, 'death'] = df_transformed_data.event.apply(lambda x : 0 if x in ['pass'] else 1)
         return df_transformed_data[self.kept_columns].set_index(self.index)
 
 
