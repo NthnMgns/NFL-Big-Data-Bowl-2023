@@ -56,8 +56,8 @@ list_feature = [
 #                     ML process                         #
 # ------------------------------------------------------ #
 # Split data
-ids_train = [1, 2, 3, 4]
-ids_test = [5, 6, 7, 8]
+ids_train = [1, 2, 3, 4, 5]
+ids_test = [6, 7, 8]
 
 gameIds_train = list()
 gameIds_test = list()
