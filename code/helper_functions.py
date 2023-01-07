@@ -228,6 +228,7 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
     event = tracking_data.query(f"gameId == {gameId} & playId == {playId} & nflId == {qbId}").event.values.tolist()
     scramble_data = scramble(gameId, playId, scouting_data, tracking_data)
     frame_qb_run = scramble_data.query(f"nflId == {qbId}").scramble.values.tolist()
+    isHurry = 1 in scouting_data.query(f"gameId == {gameId} & playId == {playId}").pff_hurry.values.tolist()
     if "ball_snap" in event:
         t_ball_snap = event.index("ball_snap")
     elif "autoevent_ballsnap" in event:
@@ -248,6 +249,8 @@ def compute_t_event(gameId, playId, plays, scouting_data, tracking_data):
             t_event = np.max(scramble_data.frameId)
         t_event = [frame_qb_run,t_event][np.argmin([frame_qb_run,t_event])]
         type_event = ["scramble","pass"][np.argmin([frame_qb_run,t_event])]
+        if isHurry and type_event == "pass":
+            type_event = "hurry"
             
     elif playresult == "S":
         if "qb_sack" in event:
@@ -304,4 +307,18 @@ def weight_diff_pack(players_data, scouting_data):
     df = pd.merge(offense2,defense2,on=["gameId","playId"])
     df["weightDiffPack"] = df.weight_x - df.weight_y
     df = df.rename(columns={"weight_x" : "weight_o", "weight_y" : "weight_d"}).reset_index()
+    return df
+
+def data_by_week(data, df_games, week):
+    """Permet de filtrer data par week."""
+    ID = df_games.query(f"week in {week}").gameId.values
+    df = data.copy()  
+    df = df[df.gameId.isin(ID)]
+    return df
+
+def get_stat(scouting_data, play_data, linemen):
+    """Calcule le nombre de hit, hurry et de sack."""
+    df = pd.merge(scouting_data,play_data,how="left",on = ["gameId","playId"])
+    df = df.groupby(["gameId","playId",linemen]).sum().reset_index().loc[:,[linemen,"pff_hit","pff_hurry","pff_sack"]]
+    df = df.groupby(linemen).sum().reset_index().rename(columns={"pff_hit" : "n_hit","pff_hurry" : "n_hurry","pff_sack" : "n_sack"})
     return df

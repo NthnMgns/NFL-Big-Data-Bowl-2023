@@ -1,4 +1,5 @@
-import pandas as pd 
+import pandas as pd
+import numpy as np
 from helper_functions import *
 import copy
 
@@ -207,6 +208,32 @@ class Outnumber(Features):
         offense = offense.rename(columns={"nflId" : "outnumber_O"}).reset_index()
 
         df_transformed_data = offense[self.kept_columns].set_index(self.index)
+        return df_transformed_data
+        
+class UnblockedPlayer(Features):
+    """Variable qui renvoie le nombre de rushers non bloqués"""
+    def __init__(self):
+        super().__init__()
+        self.kept_columns = self.index + ["unblockedRusher"]
+        self.needed_data = "Scouting data"
+
+    def transform(self):
+        df_copy = self.df_dataraw.copy()
+        df_copy = df_copy.loc[:,self.index + ["nflId","pff_role","pff_nflIdBlockedPlayer"]]
+        
+        # Calcul du nombre de joueurs bloqués
+        offense = df_copy.query("pff_role == 'Pass Block'").drop(columns = ["pff_role"])
+        offense = offense.groupby(self.index + ["pff_nflIdBlockedPlayer"]).count()
+        offense = offense.groupby(self.index).count()
+        offense = offense.rename(columns={"nflId" : "n_block"}).reset_index()
+        # Calcul du nombre de rusher
+        defense = df_copy.query("pff_role == 'Pass Rush'")
+        defense = defense.groupby(self.index).count().drop(columns = ["pff_role","pff_nflIdBlockedPlayer"])
+        defense = defense.rename(columns={"nflId" : "n_rush"}).reset_index()
+
+        df = pd.merge(offense,defense,on=["gameId","playId"])
+        df["unblockedRusher"] = df.n_rush - df.n_block
+        df_transformed_data = df[self.kept_columns].set_index(self.index)
         return df_transformed_data
     
 class SurvivalData(Features):
