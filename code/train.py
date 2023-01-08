@@ -1,11 +1,8 @@
 import pandas as pd 
 import numpy as np
+import matplotlib.pyplot as plt
 from helper_functions import *
 from feature import * 
-
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.neural_network import MLPRegressor
-from sklearn import svm
 
 from lifelines import CoxPHFitter, WeibullAFTFitter
 
@@ -27,8 +24,6 @@ df_weight_pack = weight_diff_pack(df_players,df_scouting)
 df_area_features = pd.read_csv(f"data/area_features/Area_features.csv").drop(columns=['Unnamed: 0'])
 df_detail_plays = pd.merge(df_area_features,df_play,how="left",on = ["playId","gameId"])
 
-# TODO Simulation de données à supprimer
-df_area["t_c"] = [np.random.random() for i in range(len(df_area))]
 
 # ------------------------------------------------------ #
 #                  Feature Choice                        #
@@ -57,8 +52,8 @@ list_feature = [
 #                     ML process                         #
 # ------------------------------------------------------ #
 # Split data
-ids_train = [1, 2, 3, 4]
-ids_test = [5, 6, 7, 8]
+ids_train = [1, 2, 3, 4, 5]
+ids_test = [6, 7, 8]
 
 gameIds_train = list()
 gameIds_test = list()
@@ -81,12 +76,53 @@ model.check_assumptions(df_train)
 print("Résumé")
 print(model.summary)
 
-# Test
+# Test Score
 print("Score (concordance) :")
 print(model.score(df_test, 'concordance_index'))
 
+# Extract Image
+if True : 
+    path = 'figures/'
+
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='yardsToGo', values=[0,10,20,30], cmap='coolwarm')
+    plt.savefig(path + 'yardsToGo.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='absoluteYardlineNumber', values=[10,30,60,100], cmap='coolwarm')
+    plt.savefig(path + 'absoluteYardlineNumber.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='down', values=[0,1,2,3,4], cmap='coolwarm')
+    plt.savefig(path + 'down.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='nbRusher', values=[2,5,7], cmap='coolwarm')
+    plt.savefig(path + 'nbRusher.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='nbBlock', values=[5,6,7,8], cmap='coolwarm')
+    plt.savefig(path + 'nbBlock.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='qbPosition', values=[0, 1], cmap='coolwarm')
+    plt.savefig(path + 'qbPosition.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='weightDiffPack', values=[-200,0,500,1000,1200], cmap='coolwarm')
+    plt.savefig(path + 'weightDiffPack.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='unblockedRusher', values=[-1,0,1,2,3], cmap='coolwarm')
+    plt.savefig(path + 'unblockedRusher.png')
+    plt.figure()
+    model.plot_partial_effects_on_outcome(covariates='outnumber_O', values=[0,1,2,3], cmap='coolwarm')
+    plt.savefig(path + 'outnumber_O.png')
+
 # Merge with te
-df_test.loc[:, "t_med"] = model.predict_median(df_test) 
+df_test.loc[:, "t_med"] = model.predict_percentile(df_test, p = 0.5) 
 print((df_test.t_med.min(), df_test.t_med.max(),df_test.t_med.mean(),df_test.t_med.std()))
-df_test = df_test.reset_index()[["playId", "gameId", "duration", "t_med"]]
+df_test = df_test.reset_index()
+
+# Compute Won Time
+df_test = df_test.merge(df_play, on = ['playId', 'gameId'])
+df_test = df_test.merge(df_area_features, on = ['playId', 'gameId'])
+
+df_test.loc[df_test.event == "pass", 'Won Time'] = df_test[df_test.event == "pass"].apply(lambda x: x.duration - x.t_med if x.t_med < x.duration else 0, axis = 1) / 10 #
+df_test.loc[df_test.event != "pass", 'Won Time'] = df_test[df_test.event != "pass"].apply(lambda x: x.duration - x.t_med, axis = 1) / 10 #
+
+df_test = df_test[["playId", "gameId", "duration", "t_med", 'Won Time','event']]
 df_test.to_csv("xPL.csv")

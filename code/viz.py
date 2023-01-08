@@ -368,7 +368,7 @@ def fig_bar_plot_team(df, metric, linemen, y_legend = "Legend", ascending_metric
                     sizex= imagette_size,
                     sizey = imagette_size,
                     xanchor="center",
-                    yanchor="bottom"
+                    yanchor="bottom" if team_ranking[metric].iloc[n] > 0 else "top"
                     )
         )
     return fig
