@@ -45,7 +45,7 @@ xsp_def = pd.merge(xsp_def,stat_def_test,how = "left", on = "defensiveTeam")
 data = df_area_off.groupby("n_sack").mean()
 np.corrcoef(data.index,data.meanArea) # -0.44
 np.corrcoef(df_area_off.n_sack,df_area_off.meanArea) # -0.26
-fig_2D_plot_team(df_area_off, "n_sack", "meanArea", "possessionTeam", imagette_size = 0.8)
+fig_2D_plot_team(df_area_off, "n_sack", "meanArea", "possessionTeam", x_legend = "Number of sack", y_legend = "Mean area", imagette_size = 1)
 
 ## Defense ##
 data = df_area_def.groupby("n_sack").mean()
@@ -76,7 +76,7 @@ data_off = pd.merge(xsp_off,area_off_test,how="left",on = "possessionTeam")
 np.corrcoef(data_off.xSuccessPocket,data_off.meanArea) # -0.06
 data_off.loc[:,"xSuccessPocket"] = data_off.loc[:,"xSuccessPocket"] - np.mean(data_off.loc[:,"xSuccessPocket"])
 data_off.loc[:,"meanArea"] = data_off.loc[:,"meanArea"] - np.mean(data_off.loc[:,"meanArea"])
-fig_2D_plot_team(data_off, "xSuccessPocket", "meanArea", "possessionTeam", imagette_size = 0.8)
+fig_2D_plot_team(data_off, "xSuccessPocket", "meanArea", "possessionTeam", x_legend = "PSOTE", y_legend = "Mean area", plot_title = "PSOTE and Mean area (computed on weeks 6, 7 and 8)", imagette_size = 1)
 
 ## Defense ##
 data_def = pd.merge(xsp_def,area_def_test,how="left",on = "defensiveTeam")
