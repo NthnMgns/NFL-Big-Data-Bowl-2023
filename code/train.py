@@ -112,6 +112,34 @@ if True :
     model.plot_partial_effects_on_outcome(covariates='outnumber_O', values=[0,1,2,3], cmap='coolwarm')
     plt.savefig(path + 'outnumber_O.png')
 
+    # Subplot
+    fig, axs = plt.subplots(2, 2)
+    fig.suptitle('Effect of varying a covariate')
+    
+    model.plot_partial_effects_on_outcome(covariates='yardsToGo', values=[0,10,20,30], cmap='coolwarm', ax=axs[0, 0])
+    model.plot_partial_effects_on_outcome(covariates='nbRusher', values=[2,5,7], cmap='coolwarm', ax =axs[0, 1])
+    model.plot_partial_effects_on_outcome(covariates='nbBlock', values=[5,6,7,8], cmap='coolwarm', ax = axs[1, 0])
+    model.plot_partial_effects_on_outcome(covariates='qbPosition', values=[0, 1], cmap='coolwarm', ax =axs[1, 1])
+    
+    axs[0, 0].legend(fontsize=6)
+    axs[0, 1].legend(fontsize=6)
+    axs[1, 0].legend(fontsize=6)
+    axs[1, 1].legend(fontsize=5)
+
+    #axs[0, 0].title.set_text('yardsToGo')
+    #axs[0, 1].title.set_text('nbRusher')
+    #axs[1, 0].title.set_text('nbBlock')
+    #axs[1, 1].title.set_text('weightDiffPack')
+
+    axs[1, 0].set_xlabel('Time (in 0.1 s)')
+    axs[1, 1].set_xlabel('Time (in 0.1 s)')
+
+    axs[0, 0].set_ylabel('Probability of survival')
+    axs[1, 0].set_ylabel('Probability of survival')
+
+    fig.tight_layout()
+    fig.savefig(path + 'subplot_SM.png', dpi=200)
+
 # Merge with te
 df_test.loc[:, "t_med"] = model.predict_percentile(df_test, p = 0.5) 
 print((df_test.t_med.min(), df_test.t_med.max(),df_test.t_med.mean(),df_test.t_med.std()))
