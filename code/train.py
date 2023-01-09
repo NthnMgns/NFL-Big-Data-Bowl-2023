@@ -141,16 +141,17 @@ if True :
     fig.savefig(path + 'subplot_SM.png', dpi=200)
 
 # Merge with te
-df_test.loc[:, "t_med"] = model.predict_percentile(df_test, p = 0.5) 
-print((df_test.t_med.min(), df_test.t_med.max(),df_test.t_med.mean(),df_test.t_med.std()))
+prob_survival = model.predict_survival_function(df_test, times = np.arange(5, 90)).T
+df_test_copy = pd.concat([df_test, prob_survival], axis = 1)
+df_test.loc[:, "prob"] = df_test_copy.apply(lambda x : x[x.duration], axis = 1)
 df_test = df_test.reset_index()
 
 # Compute Won Time
 df_test = df_test.merge(df_play, on = ['playId', 'gameId'])
 df_test = df_test.merge(df_area_features, on = ['playId', 'gameId'])
 
-df_test.loc[df_test.event == "pass", 'Won Time'] = df_test[df_test.event == "pass"].apply(lambda x: x.duration - x.t_med if x.t_med < x.duration else 0, axis = 1) / 10 #
-df_test.loc[df_test.event != "pass", 'Won Time'] = df_test[df_test.event != "pass"].apply(lambda x: x.duration - x.t_med, axis = 1) / 10 #
+df_test.loc[df_test.death == 1, 'xSuccessPocket'] = df_test[df_test.death == 1].apply(lambda x: x.prob, axis = 1)
+df_test.loc[df_test.death == 0, 'xSuccessPocket'] = df_test[df_test.death == 0].apply(lambda x: 1 - x.prob, axis = 1)
 
-df_test = df_test[["playId", "gameId", "duration", "t_med", 'Won Time','event']]
+df_test = df_test[["playId", "gameId",'event', "duration", "death", "prob", 'xSuccessPocket']]
 df_test.to_csv("xPL.csv")
