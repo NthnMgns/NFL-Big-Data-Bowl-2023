@@ -373,7 +373,7 @@ def fig_bar_plot_team(df, metric, linemen, y_legend = "Legend", ascending_metric
         )
     return fig
 
-def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_legend = "Legend", imagette_size = 2):
+def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_legend = "Legend", plot_title = "", imagette_size = 2):
     """Trace le plot des équipes selon deux métriques et la ligne analysée"""
     fig = go.Figure(
         go.Scatter(
@@ -389,10 +389,16 @@ def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_leg
     fig.update_layout(
                 barmode='group',
                 template="plotly_white",
+                title={
+                    'text': plot_title,
+                    'y':0.9,
+                    'x':0.5,
+                    'xanchor': 'center',
+                    'yanchor': 'top'}
     )
     fig.update_yaxes(
         title= dict(
-            text = metric_y,
+            text = y_legend,
         ),
         showline = True, 
         zerolinewidth = 2, 
@@ -401,7 +407,7 @@ def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_leg
     )
     fig.update_xaxes(
         title= dict(
-            text = metric_x,
+            text = x_legend,
         ),
         tick0 = 1,
         dtick = 1,
