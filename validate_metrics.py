@@ -81,7 +81,7 @@ data_off = pd.merge(xsp_off,area_off_test,how="left",on = "possessionTeam")
 np.corrcoef(data_off.xSuccessPocket,data_off.meanArea) # -0.06
 data_off.loc[:,"xSuccessPocket"] = data_off.loc[:,"xSuccessPocket"] - np.mean(data_off.loc[:,"xSuccessPocket"])
 data_off.loc[:,"meanArea"] = data_off.loc[:,"meanArea"] - np.mean(data_off.loc[:,"meanArea"])
-fig_2D_plot_team(data_off, "xSuccessPocket", "meanArea", "possessionTeam", x_legend = "PSOTE", y_legend = "Mean area", plot_title = "PSOTE and Mean area (computed on weeks 6, 7 and 8)", imagette_size = 1)
+fig_2D_plot_team(data_off, "xSuccessPocket", "meanArea", "possessionTeam", x_legend = "PSOTE", y_legend = "Mean area", plot_title = "PSOTE and Mean area for O-line (computed on weeks 6, 7 and 8)", imagette_size = 1)
 
 ## Defense ##
 data_def = pd.merge(xsp_def,area_def_test,how="left",on = "defensiveTeam")
@@ -97,5 +97,5 @@ fig_2D_plot_team(data_def, "xSuccessPocket", "meanArea", "defensiveTeam", imaget
 # ------------------------------------------------------ #
 
 ## Offense ##
-fig_2D_plot_team(acp_offense, "dim1", "dim2", "team", x_legend = "Dim 1", y_legend = "Dim 2", plot_title = "PCA on the number of sack, hurry and hit (weeks 6, 7 and 8)", imagette_size = 0.4)
+fig_2D_plot_team(acp_offense, "dim1", "dim2", "team", x_legend = "Dim 1", y_legend = "Dim 2", plot_title = "PCA on the number of sack, hurry and hit for O-line (weeks 6, 7 and 8)", imagette_size = 0.4)
 
