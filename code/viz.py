@@ -394,6 +394,9 @@ def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_leg
         title= dict(
             text = metric_y,
         ),
+        showline = True, 
+        zerolinewidth = 2, 
+        zerolinecolor = 'black'
         #range=[min(0, df[metric].min()), df[metric].max() * 1.2],
     )
     fig.update_xaxes(
@@ -402,6 +405,9 @@ def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_leg
         ),
         tick0 = 1,
         dtick = 1,
+        showline = True, 
+        zerolinewidth = 2,
+        zerolinecolor = 'black'
     )
 
     for n, team in enumerate(df[linemen].values): 
