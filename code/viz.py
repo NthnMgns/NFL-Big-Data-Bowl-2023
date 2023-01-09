@@ -391,14 +391,15 @@ def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_leg
                 template="plotly_white",
                 title={
                     'text': plot_title,
-                    'y':0.9,
+                    'y':0.95,
                     'x':0.5,
-                    'xanchor': 'center',
-                    'yanchor': 'top'}
+                    'font_size': 32,
+                    'xanchor': 'center'}
     )
     fig.update_yaxes(
         title= dict(
             text = y_legend,
+            font_size = 20
         ),
         showline = True, 
         zerolinewidth = 2, 
@@ -408,6 +409,7 @@ def fig_2D_plot_team(df, metric_x, metric_y, linemen, x_legend = "Legend", y_leg
     fig.update_xaxes(
         title= dict(
             text = x_legend,
+            font_size = 20
         ),
         tick0 = 1,
         dtick = 1,
