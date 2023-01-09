@@ -17,7 +17,9 @@ stat_off = get_stat(df_scouting, df_plays, "possessionTeam")
 stat_def = get_stat(df_scouting, df_plays, "defensiveTeam")
 df_scouting_test = data_by_week(df_scouting, df_games, [6,7,8])
 stat_off_test = get_stat(df_scouting_test, df_plays, "possessionTeam")
+# stat_off_test.to_csv("offense_stats_test.csv",index=False)
 stat_def_test = get_stat(df_scouting_test, df_plays, "defensiveTeam")
+# stat_def_test.to_csv("defense_stats_test.csv",index=False)
 
 ## Mean area ##
 area_off_test = pd.read_csv("offense_mean_area.csv").rename(columns={"team":"possessionTeam"})
@@ -35,6 +37,9 @@ xsp_off = xsp.groupby("possessionTeam").sum().reset_index()
 xsp_off = pd.merge(xsp_off,stat_off_test,how = "left", on = "possessionTeam")
 xsp_def = xsp.groupby("defensiveTeam").sum().reset_index()
 xsp_def = pd.merge(xsp_def,stat_def_test,how = "left", on = "defensiveTeam")
+
+## PCA ##
+acp_offense = pd.read_csv("acp_offense.csv")
 
 
 # ------------------------------------------------------ #
@@ -84,4 +89,13 @@ np.corrcoef(data_def.xSuccessPocket,data_def.meanArea) # -0.16
 data_def.loc[:,"xSuccessPocket"] = data_def.loc[:,"xSuccessPocket"] - np.mean(data_def.loc[:,"xSuccessPocket"])
 data_def.loc[:,"meanArea"] = data_def.loc[:,"meanArea"] - np.mean(data_def.loc[:,"meanArea"])
 fig_2D_plot_team(data_def, "xSuccessPocket", "meanArea", "defensiveTeam", imagette_size = 0.8)
+
+
+
+# ------------------------------------------------------ #
+#                 Validation area/success                #
+# ------------------------------------------------------ #
+
+## Offense ##
+fig_2D_plot_team(acp_offense, "dim1", "dim2", "team", x_legend = "Dim 1", y_legend = "Dim 2", plot_title = "PCA on the number of sack, hurry and hit (weeks 6, 7 and 8)", imagette_size = 0.4)
 
